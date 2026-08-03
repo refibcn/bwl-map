@@ -1,0 +1,72 @@
+---
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import RidgeLine from "../../components/RidgeLine.astro";
+import ShiftNav from "../../components/ShiftNav.astro";
+import ShiftBlock from "../../components/ShiftBlock.astro";
+import InnovationCard from "../../components/InnovationCard.astro";
+import data from "../../data/bioregions/oltenia-de-sub-munte.json";
+
+const shiftNames: Record<string, string> = Object.fromEntries(
+  data.criticalShifts.map((s) => [s.slug, s.name])
+);
+
+const shiftsWithInnovations = data.criticalShifts.map((shift) => ({
+  shift,
+  innovations: data.systemicInnovations.filter((i) => i.tags.includes(shift.slug)),
+}));
+
+const navShifts = shiftsWithInnovations.map(({ shift, innovations }) => ({
+  slug: shift.slug,
+  name: shift.name,
+  count: innovations.length,
+}));
+
+const unlinked = data.systemicInnovations.filter((i) => i.tags.length === 0);
+---
+
+<BaseLayout title={`${data.name} — BWL portfolio`}>
+  <div class="wrap" style="padding-top:3rem;padding-bottom:5rem">
+    <p class="eyebrow">Bioregional Weaving Labs · {data.country}</p>
+    <h1 style="font-size:40px;margin:0.5rem 0 0.25rem">{data.name}</h1>
+    <p style="color:var(--ink-soft);font-size:15px;margin-bottom:1.5rem">{data.location}</p>
+    <RidgeLine variant={1} />
+    <p style="font-size:17px;max-width:64ch;margin-top:1.5rem">{data.intro}</p>
+    <p style="margin-top:0.75rem">
+      <a href={data.notionUrl} target="_blank" rel="noopener" style="font-size:13px;font-weight:500">
+        View full portfolio in Notion &rarr;
+      </a>
+    </p>
+
+    <ShiftNav shifts={navShifts} unlinkedCount={unlinked.length} />
+
+    {shiftsWithInnovations.map(({ shift, innovations }, i) => (
+      <ShiftBlock
+        shift={shift}
+        innovations={innovations}
+        shiftNames={shiftNames}
+        variant={i % 2 === 0 ? 1 : 2}
+      />
+    ))}
+
+    {unlinked.length > 0 && (
+      <section id="unlinked" class="shift-block">
+        <RidgeLine variant={2} />
+        <p class="eyebrow">Not yet linked to a critical shift</p>
+        <h2 class="shift-name">Needs categorisation</h2>
+        <p class="shift-desc">
+          These systemic innovations are recorded for {data.name} but don't have shift tags yet,
+          so they aren't showing up anywhere above. Flag to the landscape steward to review and tag.
+        </p>
+        <div class="innovation-grid">
+          {unlinked.map((innovation) => (
+            <InnovationCard innovation={innovation} shiftNames={shiftNames} />
+          ))}
+        </div>
+      </section>
+    )}
+
+    <p style="margin-top:3rem;font-size:13px;color:var(--ink-soft)">
+      <a href="../../">&larr; All bioregions</a>
+    </p>
+  </div>
+</BaseLayout>

@@ -1,0 +1,35 @@
+---
+interface Innovation {
+  slug: string;
+  name: string;
+  tags: string[];
+  depth: "core" | "impact" | "story";
+  notionUrl: string | null;
+}
+
+interface Props {
+  innovation: Innovation;
+  currentShiftSlug?: string;
+  shiftNames: Record<string, string>;
+}
+
+const { innovation, currentShiftSlug, shiftNames } = Astro.props as Props;
+const otherTags = innovation.tags.filter((t) => t !== currentShiftSlug);
+const Tag = innovation.notionUrl ? "a" : "div";
+---
+
+<Tag
+  class={`innovation-card${innovation.tags.length === 0 ? " untagged" : ""}`}
+  href={innovation.notionUrl ?? undefined}
+  target={innovation.notionUrl ? "_blank" : undefined}
+  rel={innovation.notionUrl ? "noopener" : undefined}
+>
+  <div class="name">{innovation.name}</div>
+  {innovation.depth === "story" && <span class="badge">Full story</span>}
+  {innovation.tags.length === 0 && <span class="badge" style="background:var(--stone-deep);color:var(--ink-soft)">Needs shift tagging</span>}
+  {otherTags.length > 0 && (
+    <div style="margin-top:8px;font-size:12px;color:var(--ink-soft)">
+      Also feeds: {otherTags.map((t) => shiftNames[t]).join(", ")}
+    </div>
+  )}
+</Tag>

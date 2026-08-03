@@ -1,0 +1,131 @@
+{
+  "slug": "oltenia-de-sub-munte",
+  "name": "Oltenia de Sub Munte",
+  "country": "Romania",
+  "location": "Vâlcea county, sub-Carpathian foothills",
+  "intro": "A belt of forested foothills and limestone ridges beneath the Southern Carpathians, where beech forest, karst gorges and a scatter of small spa towns and mountain villages meet. The portfolio here works through rural culture, ecosystem protection and heritage-led regeneration — most visibly through the Junior Ranger conservation education programme, the Pietrari Participation Library, and Govora Heritage Lab's regeneration of a declining spa town.",
+  "notionUrl": "https://www.notion.so/Oltenia-de-sub-Munte-Portfolio-29ab5c91195380d8bf7ed428b5f9d7bf?source=copy_link",
+  "criticalShifts": [
+    {
+      "slug": "culture",
+      "name": "Culture and heritage",
+      "shift": "Culture thrives as a living force through which communities keep traditions alive, and tell new stories about their place and future",
+      "leveragePoint": "Supporting cultural programmes, events, and heritage initiatives that bring people together and tell new stories about place",
+      "systemicBarrier": "The role of culture in sustaining community life is undervalued, whether through traditional crafts and heritage or through contemporary arts and storytelling; as rural areas depopulate and cultural life thins, communities lose the shared narratives that give places meaning"
+    },
+    {
+      "slug": "education",
+      "name": "Education and knowledge",
+      "shift": "Knowledge systems actively develop and disseminate regenerative practice, equipping people with the mindsets, skills, and tools to regenerate their place",
+      "leveragePoint": "Building knowledge networks, curricula, and research programmes for regenerative practice",
+      "systemicBarrier": "Regenerative approaches to land, ecology, and economy are not embedded in mainstream education or research; practitioners lack access to the knowledge, tools, and peer networks needed to innovate and scale"
+    },
+    {
+      "slug": "ecosystems",
+      "name": "Ecosystems and biodiversity",
+      "shift": "Ecosystem integrity is restored at landscape scale, with healthy soils, water, and biodiversity as the foundation for all land use and community resilience",
+      "leveragePoint": "Developing landscape-scale holistic ecosystem restoration and conservation programmes",
+      "systemicBarrier": "Ecosystems are under sustained pressure from industrial land use, fragmentation, and pollution, with biodiversity in steep decline; restoration efforts remain fragmented, underfunded, and disconnected from the needs of local communities"
+    },
+    {
+      "slug": "food-agriculture",
+      "name": "Food and agriculture",
+      "shift": "Regenerative agriculture becomes the norm, restoring ecological health and enabling diverse, resilient farming livelihoods",
+      "leveragePoint": "Developing viable models for regenerative farming and food systems",
+      "systemicBarrier": "Large-scale industrial farming drives water and air pollution, soil degradation, and biodiversity loss; small-scale farmers often perpetuate similar degrading practices for lack of the knowledge, financing, and support needed to transition"
+    },
+    {
+      "slug": "value-chains",
+      "name": "Value chains and economic development",
+      "shift": "Regional economies diversify and add value locally, with business models that reward regenerative practice and keep value circulating in place",
+      "leveragePoint": "Developing new business models and short supply chains that capture more value from local assets",
+      "systemicBarrier": "Regional economies remain locked in low-value extraction, raw materials and products leave without processing or transformation, generating little local income; new business models remain underdeveloped"
+    },
+    {
+      "slug": "finance",
+      "name": "Finance and ownership",
+      "shift": "Capital flows toward regeneration; land and assets are governed in the long-term interest of communities and ecosystems",
+      "leveragePoint": "Co-creating place-based financing mechanisms and community ownership models",
+      "systemicBarrier": "Regenerative projects lack access to appropriate financing; land, housing, and productive assets have become unaffordable due to financialisation and concentrated ownership"
+    },
+    {
+      "slug": "policy",
+      "name": "Policy and advocacy",
+      "shift": "Policy frameworks at all levels are aligned with regenerative goals and responsive to local needs",
+      "leveragePoint": "Developing policy engagement formats that connect local practice to systemic change",
+      "systemicBarrier": "Policies at EU, national, and local levels are fragmented, contradictory, and poorly connected to on-the-ground realities, leaving communities without a coherent enabling framework for regeneration"
+    }
+  ],
+  "systemicInnovations": [
+    {
+      "slug": "ranger-junior",
+      "name": "Ranger Junior",
+      "tags": ["ecosystems", "education"],
+      "depth": "story",
+      "notionUrl": "https://app.notion.com/p/Ranger-Junior-583b5c91195383acb99001810fe35619?pvs=21"
+    },
+    {
+      "slug": "pietrari-library",
+      "name": "Pietrari Library",
+      "tags": ["culture", "education", "value-chains"],
+      "depth": "story",
+      "notionUrl": "https://app.notion.com/p/Pietrari-Library-364b5c9119538082ae3af66bf2d28e30?pvs=21"
+    },
+    {
+      "slug": "govora-heritage-lab",
+      "name": "Govora Heritage Lab",
+      "tags": ["culture"],
+      "depth": "story",
+      "notionUrl": "https://app.notion.com/p/Govora-Heritage-Lab-364b5c911953809db9b9e16b9bbe22f1?pvs=21"
+    },
+    {
+      "slug": "kogayon-association",
+      "name": "Kogayon Association",
+      "tags": ["culture", "education", "policy"],
+      "depth": "core",
+      "notionUrl": "https://app.notion.com/p/Kogayon-Association-fa1b5c9119538394a43801728e89c0b0?pvs=21"
+    },
+    {
+      "slug": "network-urban-nature",
+      "name": "The Network of Urban Nature",
+      "tags": ["ecosystems", "education", "policy"],
+      "depth": "core",
+      "notionUrl": "https://app.notion.com/p/The-Network-of-Urban-Nature-02fb5c9119538379947b811dca53b818?pvs=21"
+    },
+    {
+      "slug": "eco-ruralis",
+      "name": "Eco Ruralis",
+      "tags": ["culture", "ecosystems", "food-agriculture"],
+      "depth": "core",
+      "notionUrl": "https://app.notion.com/p/Eco-Ruralis-f8cb5c91195382a29b8a811796b8e071?pvs=21"
+    },
+    {
+      "slug": "green-belt-bucharest",
+      "name": "Green Belt of Bucharest",
+      "tags": ["ecosystems", "finance", "food-agriculture"],
+      "depth": "core",
+      "notionUrl": "https://app.notion.com/p/Green-Belt-of-Bucharest-Centura-Verde-Bucure-ti-Ilfov-Lupta-mpotriva-Polu-rii-269b5c911953822fbd5d81eacf03083c?pvs=21"
+    },
+    {
+      "slug": "alpa",
+      "name": "ALPA",
+      "tags": ["culture", "finance", "food-agriculture"],
+      "depth": "core",
+      "notionUrl": "https://app.notion.com/p/ALPA-283b5c911953838b967001c504fd5cb8?pvs=21"
+    },
+    {
+      "slug": "vatra-satului",
+      "name": "Vatra Satului",
+      "tags": [],
+      "depth": "core",
+      "notionUrl": null
+    },
+    {
+      "slug": "geoclubul-costesti",
+      "name": "Geoclubul Costești",
+      "tags": [],
+      "depth": "core",
+      "notionUrl": null
+    }
+  ]
+}

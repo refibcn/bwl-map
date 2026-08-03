@@ -1,0 +1,20 @@
+---
+interface Props {
+  shifts: { slug: string; name: string; count: number }[];
+  unlinkedCount: number;
+}
+const { shifts, unlinkedCount } = Astro.props as Props;
+---
+
+<nav class="chip-nav" aria-label="Jump to a critical shift">
+  {shifts.map((s) => (
+    <a class="chip" href={`#${s.slug}`}>
+      {s.name} <span class="count">{s.count}</span>
+    </a>
+  ))}
+  {unlinkedCount > 0 && (
+    <a class="chip" href="#unlinked" style="border-style:dashed">
+      Needs tagging <span class="count">{unlinkedCount}</span>
+    </a>
+  )}
+</nav>

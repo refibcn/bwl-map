@@ -1,0 +1,23 @@
+---
+interface Props {
+  variant?: 1 | 2;
+}
+const { variant = 1 } = Astro.props as Props;
+
+const paths: Record<number, string> = {
+  1: "M0,40 L60,22 L130,34 L210,10 L300,30 L390,16 L480,32 L580,20 L680,38 L760,24 L880,36 L880,60 L0,60 Z",
+  2: "M0,36 L90,18 L170,30 L250,8 L340,26 L420,14 L520,34 L600,18 L680,30 L780,12 L880,28 L880,60 L0,60 Z",
+};
+---
+
+<svg class="ridge-line" viewBox="0 0 880 60" preserveAspectRatio="none" aria-hidden="true">
+  <path d={paths[variant]} fill="var(--forest)" opacity="0.16" />
+</svg>
+
+<style>
+  .ridge-line {
+    display: block;
+    width: 100%;
+    height: 32px;
+  }
+</style>
