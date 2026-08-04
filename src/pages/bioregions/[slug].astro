@@ -1,10 +1,22 @@
 ---
+import { getCollection } from "astro:content";
 import BaseLayout from "../../layouts/BaseLayout.astro";
 import RidgeLine from "../../components/RidgeLine.astro";
 import ShiftNav from "../../components/ShiftNav.astro";
 import ShiftBlock from "../../components/ShiftBlock.astro";
 import InnovationCard from "../../components/InnovationCard.astro";
-import data from "../../data/bioregions/oltenia-de-sub-munte.json";
+
+export async function getStaticPaths() {
+  const all = await getCollection("bioregions");
+  return all.map((entry) => ({
+    params: { slug: entry.data.slug },
+    props: { entry },
+  }));
+}
+
+const { entry } = Astro.props;
+
+const data = entry.data;
 
 const shiftNames: Record<string, string> = Object.fromEntries(
   data.criticalShifts.map((s) => [s.slug, s.name])

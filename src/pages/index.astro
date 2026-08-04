@@ -1,15 +1,12 @@
 ---
+import { getCollection } from "astro:content";
 import BaseLayout from "../layouts/BaseLayout.astro";
 import RidgeLine from "../components/RidgeLine.astro";
 
-const bioregions = [
-  { name: "Oltenia de Sub Munte", country: "Romania", href: "bioregions/oltenia-de-sub-munte", ready: true },
-  { name: "Living Delta", country: "Netherlands", ready: false },
-  { name: "Colina", country: "France", ready: false },
-  { name: "Laconia", country: "Greece", ready: false },
-  { name: "Vistula River", country: "Poland", ready: false },
-  { name: "Cilento", country: "Italy", ready: false },
-];
+const all = await getCollection("bioregions");
+const bioregions = all
+  .map((b) => b.data)
+  .sort((a, b) => a.name.localeCompare(b.name));
 ---
 
 <BaseLayout title="BWL Map">
@@ -19,17 +16,10 @@ const bioregions = [
     <RidgeLine variant={1} />
     <div style="margin-top:2rem;display:grid;gap:10px">
       {bioregions.map((b) => (
-        b.ready ? (
-          <a class="innovation-card" href={b.href} style="display:flex;justify-content:space-between;align-items:center">
-            <span class="name" style="margin:0">{b.name}</span>
-            <span style="font-size:13px;color:var(--ink-soft)">{b.country}</span>
-          </a>
-        ) : (
-          <div class="innovation-card untagged" style="display:flex;justify-content:space-between;align-items:center">
-            <span class="name" style="margin:0">{b.name}</span>
-            <span class="badge" style="background:var(--stone-deep);color:var(--ink-soft)">Coming soon</span>
-          </div>
-        )
+        <a class="innovation-card" href={`bioregions/${b.slug}/`} style="display:flex;justify-content:space-between;align-items:center">
+          <span class="name" style="margin:0">{b.name}</span>
+          <span style="font-size:13px;color:var(--ink-soft)">{b.country}</span>
+        </a>
       ))}
     </div>
   </div>
