@@ -1,4 +1,7 @@
 import type { Loader } from "astro/loaders";
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+import { dirname, join } from "node:path";
 
 const DATA_SOURCES = {
   bioregions: "09bb5c91-1953-83f5-9764-8752cc035242",
@@ -129,11 +132,18 @@ export function notionBioregionLoader(): Loader {
       const token = import.meta.env.NOTION_TOKEN || process.env.NOTION_TOKEN;
       if (!token) {
         logger.warn("NOTION_TOKEN not found; falling back to local fixture");
-        const fixture = await import("../data/bioregions/oltenia-de-sub-munte.json");
-        store.set({
-          id: fixture.slug,
-          data: fixture as unknown as BioregionEntry,
-        });
+        try {
+          const __dirname = dirname(fileURLToPath(import.meta.url));
+          const fixturePath = join(__dirname, "../data/bioregions/oltenia-de-sub-munte.json");
+          const fixture = JSON.parse(readFileSync(fixturePath, "utf-8"));
+          store.set({
+            id: fixture.slug,
+            data: fixture as BioregionEntry,
+          });
+          logger.info(`Loaded local fixture: ${fixture.name}`);
+        } catch (err) {
+          logger.error(`Failed to load local fixture: ${(err as Error).message}`);
+        }
         return;
       }
 
