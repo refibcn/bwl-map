@@ -13,60 +13,13 @@ export async function getStaticPaths() {
 
 const { entry } = Astro.props as any;
 const data = entry.data;
-
-const PALETTE = [
-  "#e8a33c", "#4fb6e8", "#5bcb82", "#a8c93c", "#e8703c",
-  "#c99a4f", "#9c7fe8", "#e85c8a", "#5ce8d4", "#e8e05c",
-];
 ---
 
 <BaseLayout title={`${data.name} — BWL portfolio`}>
-  <div class="wrap" style="padding-top:3.5rem;padding-bottom:5rem">
-    <p class="eyebrow">Bioregional Weaving Labs &middot; {data.country}</p>
-    <h1 style="font-size:38px;margin:0.5rem 0 0.25rem">{data.name}</h1>
-    <p style="color:var(--mist);font-size:14.5px;margin-bottom:1.25rem">{data.location}</p>
-    {data.intro && (
-      <p style="font-size:16px;color:var(--mist);max-width:68ch">{data.intro}</p>
-    )}
-
-    <div style="margin-top:2.5rem">
-      <FlowDiagram shifts={data.criticalShifts} innovations={data.systemicInnovations} bioregionName={data.name} />
-    </div>
-
-    <p style="margin-top:1.5rem;font-size:13px;color:var(--mist-dim)">
-      {data.systemicInnovations.length} systemic innovations &middot; {data.criticalShifts.length} critical shifts &middot;
-      lines from each shift toward {data.name} thicken with how many innovations feed it.
-      {data.notionUrl && (
-        <>
-          {" "}&middot; <a href={data.notionUrl} target="_blank" rel="noopener">view in Notion</a>
-        </>
-      )}
-    </p>
-
-    {data.criticalShifts.length > 0 && (
-      <div style="margin-top:3rem">
-        <p class="eyebrow" style="margin-bottom:0.5rem">The shifts, in full</p>
-        {data.criticalShifts.map((shift: any, i: number) => (
-          <details class="shift-detail">
-            <summary>
-              <span class="dot" style={`background:${PALETTE[i % PALETTE.length]}`}></span>
-              {shift.name}
-            </summary>
-            <dl class="body">
-              <dt>Critical shift</dt>
-              <dd>{shift.shift}</dd>
-              <dt>Leverage point</dt>
-              <dd>{shift.leveragePoint}</dd>
-              <dt>Systemic barrier</dt>
-              <dd>{shift.systemicBarrier}</dd>
-            </dl>
-          </details>
-        ))}
-      </div>
-    )}
-
-    <p style="margin-top:3rem;font-size:13px;color:var(--mist-dim)">
-      <a href="../../">&larr; All bioregions</a>
-    </p>
-  </div>
+  <FlowDiagram
+    bioregionName={data.name}
+    bioregionDescription={data.intro}
+    shifts={data.criticalShifts}
+    innovations={data.systemicInnovations}
+  />
 </BaseLayout>

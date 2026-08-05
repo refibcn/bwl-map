@@ -12,6 +12,7 @@ const DATA_SOURCES = {
 export interface CriticalShift {
   slug: string;
   name: string;
+  emoji: string | null;
   shift: string;
   leveragePoint: string;
   systemicBarrier: string;
@@ -20,6 +21,7 @@ export interface CriticalShift {
 export interface SystemicInnovation {
   slug: string;
   name: string;
+  description: string;
   tags: string[];
   depth: "core" | "story";
   notionUrl: string | null;
@@ -44,6 +46,11 @@ function getTitle(props: any) {
 
 function getTagTitle(props: any) {
   return props.Tag?.title?.map((t: any) => t.plain_text).join("") || "";
+}
+
+function getEmoji(page: any) {
+  if (page.icon?.type === "emoji") return page.icon.emoji;
+  return null;
 }
 
 function getRichText(props: any, key: string) {
@@ -174,6 +181,7 @@ export function notionBioregionLoader(): Loader {
             return {
               slug,
               name,
+              emoji: getEmoji(s),
               shift: shiftText,
               leveragePoint: getRichText(s.properties, "Leverage Point"),
               systemicBarrier: getRichText(s.properties, "Systemic Barrier"),
@@ -194,6 +202,7 @@ export function notionBioregionLoader(): Loader {
             return {
               slug: getRichText(i.properties, "URL slug") || slugify(getTitle(i.properties)),
               name: getTitle(i.properties),
+              description: getRichText(i.properties, "Description"),
               tags,
               depth: getCheckbox(i.properties, "Case Study") ? "story" : "core",
               notionUrl: getUrl(i.properties, "Website") || getUrl(i.properties, "Learn More") || null,

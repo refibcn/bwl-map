@@ -2,6 +2,7 @@
 interface Shift {
   slug: string;
   name: string;
+  emoji: string | null;
   shift: string;
   leveragePoint: string;
   systemicBarrier: string;
@@ -10,6 +11,7 @@ interface Shift {
 interface Innovation {
   slug: string;
   name: string;
+  description: string;
   tags: string[];
   depth: string;
   notionUrl: string | null;
@@ -19,52 +21,82 @@ interface Props {
   shifts: Shift[];
   innovations: Innovation[];
   bioregionName: string;
+  bioregionDescription: string;
 }
 
-const { shifts, innovations, bioregionName } = Astro.props as Props;
+const { shifts, innovations, bioregionName, bioregionDescription } = Astro.props as Props;
 
 const PALETTE = [
-  "#e8a33c", "#4fb6e8", "#5bcb82", "#a8c93c", "#e8703c",
-  "#c99a4f", "#9c7fe8", "#e85c8a", "#5ce8d4", "#e8e05c",
+  "#20404F", // BWL primary
+  "#E2AD4F", // BWL secondary
+  "#5C8A7A", // muted teal
+  "#C78A1D", // darker gold
+  "#4A7C6F", // sage
+  "#8B5A2B", // warm brown
+  "#3D6B66", // deep sage
+  "#D4A84B", // light gold
 ];
 
-const width = 1000;
-const top = 50;
-const rowH = 38;
-const innovCount = Math.max(innovations.length, 1);
-const innovSpan = innovCount * rowH;
-const shiftCount = Math.max(shifts.length, 1);
-const height = top * 2 + innovSpan;
+const width = 1100;
+const margin = { top: 60, right: 60, bottom: 60, left: 60 };
 
-const bioCx = width - 100;
-const bioCy = top + innovSpan / 2;
-const bioR = 76;
+const bioW = 260;
+const bioX = margin.left + bioW / 2;
+const csX = margin.left + bioW + 140;
+const csW = 280;
+const sisX = csX + csW + 140;
+const sisW = 300;
 
-const innovX = 34;
-const linkStartX = 300;
-const shiftX = 420;
-const shiftW = 250;
+const rowHeight = 92;
+const csGap = 24;
+const sisGap = 18;
 
-function yFor(index: number, count: number, spanStart: number, spanEnd: number) {
-  if (count <= 1) return (spanStart + spanEnd) / 2;
-  return spanStart + (index * (spanEnd - spanStart)) / (count - 1);
-}
+const csHeight = shifts.length * rowHeight + (shifts.length - 1) * csGap;
+const sisHeight = innovations.length * rowHeight + (innovations.length - 1) * sisGap;
+const contentHeight = Math.max(csHeight, sisHeight);
+const height = contentHeight + margin.top + margin.bottom + 60;
 
-function curve(x1: number, y1: number, x2: number, y2: number) {
-  const mx = (x1 + x2) / 2;
-  return `M${x1},${y1} C${mx},${y1} ${mx},${y2} ${x2},${y2}`;
+const bioY = height / 2;
+const bioH = Math.max(180, 60 + wrapLines(bioregionDescription, 28).length * 20);
+
+const csStartY = (height - csHeight) / 2;
+const sisStartY = (height - sisHeight) / 2;
+
+const shiftPositions = shifts.map((s, i) => ({
+  ...s,
+  y: csStartY + i * (rowHeight + csGap) + rowHeight / 2,
+  color: PALETTE[i % PALETTE.length],
+}));
+
+const shiftBySlug = new Map(shiftPositions.map((s) => [s.slug, s]));
+
+const innovPositions = innovations.map((inv, i) => ({
+  ...inv,
+  y: sisStartY + i * (rowHeight + sisGap) + rowHeight / 2,
+}));
+
+const maxLinked = Math.max(
+  ...shiftPositions.map((s) => innovations.filter((i) => i.tags.includes(s.slug)).length),
+  1
+);
+
+function slugify(text: string) {
+  return text
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)/g, "");
 }
 
 function truncate(text: string, max: number) {
   return text.length > max ? text.slice(0, max - 1).trim() + "\u2026" : text;
 }
 
-function wrapLines(text: string, maxCharsPerLine: number) {
+function wrapLines(text: string, maxChars: number) {
   const words = text.split(" ");
   const lines: string[] = [];
   let current = "";
   for (const w of words) {
-    if ((current + " " + w).trim().length > maxCharsPerLine && current) {
+    if ((current + " " + w).trim().length > maxChars && current) {
       lines.push(current.trim());
       current = w;
     } else {
@@ -75,145 +107,182 @@ function wrapLines(text: string, maxCharsPerLine: number) {
   return lines;
 }
 
-const shiftPositions = shifts.map((s, i) => ({
-  ...s,
-  y: yFor(i, shiftCount, top + 18, top + innovSpan - 18),
-  color: PALETTE[i % PALETTE.length],
-}));
+function curve(x1: number, y1: number, x2: number, y2: number, strength = 0.5) {
+  const dx = x2 - x1;
+  const mx = x1 + dx * strength;
+  return `M${x1},${y1} C${mx},${y1} ${mx},${y2} ${x2},${y2}`;
+}
 
-const shiftBySlug = new Map(shiftPositions.map((s) => [s.slug, s]));
-
-const innovPositions = innovations.map((inv, i) => ({
-  ...inv,
-  y: top + i * rowH + rowH / 2,
-}));
-
-const maxLinked = Math.max(
-  ...shiftPositions.map((s) => innovations.filter((i) => i.tags.includes(s.slug)).length),
-  1
-);
-
-const bioLines = wrapLines(bioregionName, 13);
-const bioLineHeight = 20;
-const bioTextStartY = bioCy - ((bioLines.length - 1) * bioLineHeight) / 2;
+const bioLines = wrapLines(bioregionName, 18);
+const bioDescLines = wrapLines(bioregionDescription, 26);
 ---
 
-<div style="overflow-x:auto">
-<svg width="100%" style={`min-width:${Math.min(width, 720)}px`} viewBox={`0 0 ${width} ${height}`} role="img">
-  <title>Flow diagram of {bioregionName}'s systemic innovations feeding critical shifts, converging on the bioregion</title>
+<div style="overflow-x:auto;-webkit-overflow-scrolling:touch">
+<svg
+  width="100%"
+  style={`min-width:${Math.min(width, 720)}px;background:var(--paper)`}
+  viewBox={`0 0 ${width} ${height}`}
+  role="img"
+  xmlns="http://www.w3.org/2000/svg"
+>
+  <title>Flow diagram of {bioregionName}'s systemic innovations feeding critical shifts</title>
   <desc>
     {innovations.length} systemic innovations connect through {shifts.length} critical shifts toward {bioregionName}'s overall regenerative change.
   </desc>
+
   <defs>
-    <filter id="glow" x="-60%" y="-60%" width="220%" height="220%">
-      <feGaussianBlur stdDeviation="3.5" result="blur" />
-      <feMerge>
-        <feMergeNode in="blur" />
-        <feMergeNode in="SourceGraphic" />
-      </feMerge>
+    <filter id="softShadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#20404f" flood-opacity="0.08" />
     </filter>
   </defs>
 
+  {/* SIS → CS lines */}
   {innovPositions.map((inv) =>
     inv.tags.map((tagSlug) => {
       const s = shiftBySlug.get(tagSlug);
       if (!s) return null;
       return (
         <path
-          d={curve(linkStartX, inv.y, shiftX, s.y)}
+          d={curve(sisX, inv.y, csX + csW, s.y)}
           fill="none"
           stroke={s.color}
-          stroke-width="1"
-          opacity="0.28"
+          stroke-width="2.5"
+          opacity="0.45"
         />
       );
     })
   )}
 
+  {/* CS → Bioregion lines */}
   {shiftPositions.map((s) => {
     const count = innovations.filter((i) => i.tags.includes(s.slug)).length;
     const strength = count / maxLinked;
     return (
       <path
-        d={curve(shiftX + shiftW, s.y, bioCx - bioR, bioCy)}
+        d={curve(csX, s.y, bioX + bioW / 2, bioY)}
         fill="none"
         stroke={s.color}
-        stroke-width={1.5 + strength * 5}
+        stroke-width={2 + strength * 5}
         opacity={0.35 + strength * 0.45}
-        filter="url(#glow)"
       />
     );
   })}
 
-  {innovPositions.map((inv) => {
+  {/* Bioregion rounded square */}
+  <rect
+    x={bioX - bioW / 2}
+    y={bioY - bioH / 2}
+    width={bioW}
+    height={bioH}
+    rx="28"
+    fill="var(--paper-raised)"
+    stroke="var(--bwl-primary)"
+    stroke-width="2"
+    filter="url(#softShadow)"
+  />
+  <rect
+    x={bioX - bioW / 2 + 8}
+    y={bioY - bioH / 2 + 8}
+    width={bioW - 16}
+    height={bioH - 16}
+    rx="22"
+    fill="none"
+    stroke="var(--bwl-secondary)"
+    stroke-width="1"
+    opacity="0.35"
+  />
+
+  <foreignObject x={bioX - bioW / 2 + 20} y={bioY - bioH / 2 + 20} width={bioW - 40} height={bioH - 40}>
+    <div xmlns="http://www.w3.org/1999/xhtml" style="height:100%;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;">
+      <div style="font-family:var(--font-display);font-size:18px;font-weight:bold;color:var(--bwl-primary);line-height:1.25;margin-bottom:10px;">
+        {bioLines.map((line) => (
+          <div>{line}</div>
+        ))}
+      </div>
+      <div style="font-family:var(--font-body);font-size:12px;color:var(--bwl-text);line-height:1.5;opacity:0.85;">
+        {bioDescLines.map((line) => (
+          <div>{line}</div>
+        ))}
+      </div>
+    </div>
+  </foreignObject>
+
+  {/* Critical Shifts */}
+  {shiftPositions.map((s, i) => {
+    const emoji = s.emoji || "";
+    return (
+      <g>
+        <rect
+          x={csX}
+          y={s.y - 34}
+          width={csW}
+          height="68"
+          rx="34"
+          fill="var(--paper-raised)"
+          stroke={s.color}
+          stroke-width="2"
+          filter="url(#softShadow)"
+        />
+        <circle cx={csX + 30} cy={s.y} r="5" fill={s.color} />
+        <foreignObject x={csX + 45} y={s.y - 28} width={csW - 60} height="56">
+          <div xmlns="http://www.w3.org/1999/xhtml" style="height:100%;display:flex;flex-direction:column;justify-content:center;">
+            <div style="font-family:var(--font-display);font-size:14px;font-weight:bold;color:var(--bwl-primary);line-height:1.2;">
+              {emoji} {truncate(s.name, 34)}
+            </div>
+            <div style="font-family:var(--font-body);font-size:10.5px;color:var(--bwl-text);line-height:1.35;margin-top:3px;opacity:0.85;">
+              {truncate(s.leveragePoint, 55)}
+            </div>
+          </div>
+        </foreignObject>
+      </g>
+    );
+  })}
+
+  {/* Systemic Innovations */}
+  {innovPositions.map((inv, i) => {
     const untagged = inv.tags.length === 0;
-    const dot = (
-      <circle
-        cx={innovX}
-        cy={inv.y}
-        r="4"
-        fill={untagged ? "none" : "var(--paper)"}
-        stroke={untagged ? "var(--mist-dim)" : "none"}
-        stroke-width="1"
-        stroke-dasharray={untagged ? "2,2" : "none"}
-      />
-    );
-    const label = (
-      <text
-        x={innovX + 14}
-        y={inv.y + 4}
-        font-size="12.5"
-        fill={untagged ? "var(--mist-dim)" : "var(--paper)"}
-      >
-        {truncate(inv.name, 40)}
-      </text>
-    );
-    return inv.notionUrl ? (
-      <a href={inv.notionUrl} target="_blank" rel="noopener">
-        {dot}
-        {label}
-      </a>
-    ) : (
-      <>
-        {dot}
-        {label}
-      </>
+    return (
+      <g>
+        <rect
+          x={sisX}
+          y={inv.y - 36}
+          width={sisW}
+          height="72"
+          rx="12"
+          fill={untagged ? "var(--paper-raised)" : "#ffffff"}
+          stroke={untagged ? "var(--bwl-muted)" : "var(--line-strong)"}
+          stroke-width="1.5"
+          stroke-dasharray={untagged ? "4,3" : "none"}
+          filter="url(#softShadow)"
+        />
+        <foreignObject x={sisX + 14} y={inv.y - 30} width={sisW - 50} height="60">
+          <div xmlns="http://www.w3.org/1999/xhtml" style="height:100%;display:flex;flex-direction:column;justify-content:center;">
+            <div style="font-family:var(--font-display);font-size:13.5px;font-weight:bold;color:var(--bwl-primary);line-height:1.25;">
+              {truncate(inv.name, 38)}
+            </div>
+            <div style="font-family:var(--font-body);font-size:10px;color:var(--bwl-text);line-height:1.35;margin-top:4px;opacity:0.85;">
+              {truncate(inv.description, 80)}
+            </div>
+          </div>
+        </foreignObject>
+        {inv.notionUrl && (
+          <a href={inv.notionUrl} target="_blank" rel="noopener">
+            <g>
+              <circle cx={sisX + sisW - 18} cy={inv.y + 18} r="10" fill="var(--bwl-secondary)" opacity="0.15" />
+              <text
+                x={sisX + sisW - 18}
+                y={inv.y + 22}
+                text-anchor="middle"
+                font-size="12"
+                fill="var(--bwl-primary)"
+                font-family="var(--font-body)"
+                font-weight="bold"
+              >↗</text>
+            </g>
+          </a>
+        )}
+      </g>
     );
   })}
-
-  {shiftPositions.map((s) => (
-    <g>
-      <rect
-        x={shiftX}
-        y={s.y - 18}
-        width={shiftW}
-        height="36"
-        rx="18"
-        fill="var(--void-raised)"
-        stroke={s.color}
-        stroke-width="1"
-        opacity="0.95"
-      />
-      <circle cx={shiftX + 20} cy={s.y} r="5" fill={s.color} />
-      <text x={shiftX + 34} y={s.y + 4.5} font-size="13" font-weight="500" fill="var(--paper)">
-        {truncate(s.name, 30)}
-      </text>
-    </g>
-  ))}
-
-  <circle cx={bioCx} cy={bioCy} r={bioR + 20} fill="var(--paper)" opacity="0.06" filter="url(#glow)" />
-  <circle cx={bioCx} cy={bioCy} r={bioR} fill="var(--void-raised)" stroke="var(--paper)" stroke-width="1" opacity="0.9" />
-  {bioLines.map((line, i) => (
-    <text
-      x={bioCx}
-      y={bioTextStartY + i * bioLineHeight}
-      text-anchor="middle"
-      font-family="var(--font-display)"
-      font-size="16"
-      fill="var(--paper)"
-    >
-      {line}
-    </text>
-  ))}
 </svg>
 </div>
