@@ -1,0 +1,219 @@
+---
+interface Shift {
+  slug: string;
+  name: string;
+  shift: string;
+  leveragePoint: string;
+  systemicBarrier: string;
+}
+
+interface Innovation {
+  slug: string;
+  name: string;
+  tags: string[];
+  depth: string;
+  notionUrl: string | null;
+}
+
+interface Props {
+  shifts: Shift[];
+  innovations: Innovation[];
+  bioregionName: string;
+}
+
+const { shifts, innovations, bioregionName } = Astro.props as Props;
+
+const PALETTE = [
+  "#e8a33c", "#4fb6e8", "#5bcb82", "#a8c93c", "#e8703c",
+  "#c99a4f", "#9c7fe8", "#e85c8a", "#5ce8d4", "#e8e05c",
+];
+
+const width = 1000;
+const top = 50;
+const rowH = 38;
+const innovCount = Math.max(innovations.length, 1);
+const innovSpan = innovCount * rowH;
+const shiftCount = Math.max(shifts.length, 1);
+const height = top * 2 + innovSpan;
+
+const bioCx = width - 100;
+const bioCy = top + innovSpan / 2;
+const bioR = 76;
+
+const innovX = 34;
+const linkStartX = 300;
+const shiftX = 420;
+const shiftW = 250;
+
+function yFor(index: number, count: number, spanStart: number, spanEnd: number) {
+  if (count <= 1) return (spanStart + spanEnd) / 2;
+  return spanStart + (index * (spanEnd - spanStart)) / (count - 1);
+}
+
+function curve(x1: number, y1: number, x2: number, y2: number) {
+  const mx = (x1 + x2) / 2;
+  return `M${x1},${y1} C${mx},${y1} ${mx},${y2} ${x2},${y2}`;
+}
+
+function truncate(text: string, max: number) {
+  return text.length > max ? text.slice(0, max - 1).trim() + "\u2026" : text;
+}
+
+function wrapLines(text: string, maxCharsPerLine: number) {
+  const words = text.split(" ");
+  const lines: string[] = [];
+  let current = "";
+  for (const w of words) {
+    if ((current + " " + w).trim().length > maxCharsPerLine && current) {
+      lines.push(current.trim());
+      current = w;
+    } else {
+      current = (current + " " + w).trim();
+    }
+  }
+  if (current) lines.push(current);
+  return lines;
+}
+
+const shiftPositions = shifts.map((s, i) => ({
+  ...s,
+  y: yFor(i, shiftCount, top + 18, top + innovSpan - 18),
+  color: PALETTE[i % PALETTE.length],
+}));
+
+const shiftBySlug = new Map(shiftPositions.map((s) => [s.slug, s]));
+
+const innovPositions = innovations.map((inv, i) => ({
+  ...inv,
+  y: top + i * rowH + rowH / 2,
+}));
+
+const maxLinked = Math.max(
+  ...shiftPositions.map((s) => innovations.filter((i) => i.tags.includes(s.slug)).length),
+  1
+);
+
+const bioLines = wrapLines(bioregionName, 13);
+const bioLineHeight = 20;
+const bioTextStartY = bioCy - ((bioLines.length - 1) * bioLineHeight) / 2;
+---
+
+<div style="overflow-x:auto">
+<svg width="100%" style={`min-width:${Math.min(width, 720)}px`} viewBox={`0 0 ${width} ${height}`} role="img">
+  <title>Flow diagram of {bioregionName}'s systemic innovations feeding critical shifts, converging on the bioregion</title>
+  <desc>
+    {innovations.length} systemic innovations connect through {shifts.length} critical shifts toward {bioregionName}'s overall regenerative change.
+  </desc>
+  <defs>
+    <filter id="glow" x="-60%" y="-60%" width="220%" height="220%">
+      <feGaussianBlur stdDeviation="3.5" result="blur" />
+      <feMerge>
+        <feMergeNode in="blur" />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+  </defs>
+
+  {innovPositions.map((inv) =>
+    inv.tags.map((tagSlug) => {
+      const s = shiftBySlug.get(tagSlug);
+      if (!s) return null;
+      return (
+        <path
+          d={curve(linkStartX, inv.y, shiftX, s.y)}
+          fill="none"
+          stroke={s.color}
+          stroke-width="1"
+          opacity="0.28"
+        />
+      );
+    })
+  )}
+
+  {shiftPositions.map((s) => {
+    const count = innovations.filter((i) => i.tags.includes(s.slug)).length;
+    const strength = count / maxLinked;
+    return (
+      <path
+        d={curve(shiftX + shiftW, s.y, bioCx - bioR, bioCy)}
+        fill="none"
+        stroke={s.color}
+        stroke-width={1.5 + strength * 5}
+        opacity={0.35 + strength * 0.45}
+        filter="url(#glow)"
+      />
+    );
+  })}
+
+  {innovPositions.map((inv) => {
+    const untagged = inv.tags.length === 0;
+    const dot = (
+      <circle
+        cx={innovX}
+        cy={inv.y}
+        r="4"
+        fill={untagged ? "none" : "var(--paper)"}
+        stroke={untagged ? "var(--mist-dim)" : "none"}
+        stroke-width="1"
+        stroke-dasharray={untagged ? "2,2" : "none"}
+      />
+    );
+    const label = (
+      <text
+        x={innovX + 14}
+        y={inv.y + 4}
+        font-size="12.5"
+        fill={untagged ? "var(--mist-dim)" : "var(--paper)"}
+      >
+        {truncate(inv.name, 40)}
+      </text>
+    );
+    return inv.notionUrl ? (
+      <a href={inv.notionUrl} target="_blank" rel="noopener">
+        {dot}
+        {label}
+      </a>
+    ) : (
+      <>
+        {dot}
+        {label}
+      </>
+    );
+  })}
+
+  {shiftPositions.map((s) => (
+    <g>
+      <rect
+        x={shiftX}
+        y={s.y - 18}
+        width={shiftW}
+        height="36"
+        rx="18"
+        fill="var(--void-raised)"
+        stroke={s.color}
+        stroke-width="1"
+        opacity="0.95"
+      />
+      <circle cx={shiftX + 20} cy={s.y} r="5" fill={s.color} />
+      <text x={shiftX + 34} y={s.y + 4.5} font-size="13" font-weight="500" fill="var(--paper)">
+        {truncate(s.name, 30)}
+      </text>
+    </g>
+  ))}
+
+  <circle cx={bioCx} cy={bioCy} r={bioR + 20} fill="var(--paper)" opacity="0.06" filter="url(#glow)" />
+  <circle cx={bioCx} cy={bioCy} r={bioR} fill="var(--void-raised)" stroke="var(--paper)" stroke-width="1" opacity="0.9" />
+  {bioLines.map((line, i) => (
+    <text
+      x={bioCx}
+      y={bioTextStartY + i * bioLineHeight}
+      text-anchor="middle"
+      font-family="var(--font-display)"
+      font-size="16"
+      fill="var(--paper)"
+    >
+      {line}
+    </text>
+  ))}
+</svg>
+</div>

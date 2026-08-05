@@ -1,7 +1,6 @@
 ---
 import { getCollection } from "astro:content";
 import BaseLayout from "../layouts/BaseLayout.astro";
-import RidgeLine from "../components/RidgeLine.astro";
 
 const all = await getCollection("bioregions");
 const bioregions = all
@@ -12,13 +11,12 @@ const bioregions = all
 <BaseLayout title="BWL Map">
   <div class="wrap" style="padding-top:4rem;padding-bottom:5rem">
     <p class="eyebrow">Bioregional Weaving Labs</p>
-    <h1 style="font-size:36px;margin:0.5rem 0 1.5rem">Portfolio map</h1>
-    <RidgeLine variant={1} />
-    <div style="margin-top:2rem;display:grid;gap:10px">
+    <h1 style="font-size:34px;margin:0.5rem 0 2rem">Portfolio map</h1>
+    <div style="display:grid;gap:10px">
       {bioregions.map((b) => (
-        <a class="innovation-card" href={`bioregions/${b.slug}/`} style="display:flex;justify-content:space-between;align-items:center">
-          <span class="name" style="margin:0">{b.name}</span>
-          <span style="font-size:13px;color:var(--ink-soft)">{b.country}</span>
+        <a class="landing-row" href={`bioregions/${b.slug}/`}>
+          <span class="name">{b.name}</span>
+          <span class="badge-soft">{b.country}</span>
         </a>
       ))}
     </div>
