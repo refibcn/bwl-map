@@ -1,4 +1,6 @@
 ---
+import SVGTextBlock from "./SVGTextBlock.astro";
+
 interface Shift {
   slug: string;
   name: string;
@@ -37,27 +39,58 @@ const PALETTE = [
   "#D4A84B", // light gold
 ];
 
-const width = 1100;
-const margin = { top: 60, right: 60, bottom: 60, left: 60 };
+const width = 860;
+const margin = { top: 48, right: 48, bottom: 48, left: 48 };
 
-const bioW = 260;
+const bioW = 170;
 const bioX = margin.left + bioW / 2;
-const csX = margin.left + bioW + 140;
-const csW = 280;
-const sisX = csX + csW + 140;
-const sisW = 300;
+const csX = margin.left + bioW + 80;
+const csW = 210;
+const sisX = csX + csW + 80;
+const sisW = 220;
 
-const rowHeight = 92;
-const csGap = 24;
-const sisGap = 18;
+const rowHeight = 72;
+const csGap = 16;
+const sisGap = 12;
 
 const csHeight = shifts.length * rowHeight + (shifts.length - 1) * csGap;
 const sisHeight = innovations.length * rowHeight + (innovations.length - 1) * sisGap;
 const contentHeight = Math.max(csHeight, sisHeight);
-const height = contentHeight + margin.top + margin.bottom + 60;
+const height = contentHeight + margin.top + margin.bottom + 32;
 
 const bioY = height / 2;
-const bioH = Math.max(180, 60 + wrapLines(bioregionDescription, 28).length * 20);
+
+function shorten(text: string, max: number) {
+  return text.length > max ? text.slice(0, max - 1).trim() + "\u2026" : text;
+}
+
+function wrapLines(text: string, maxChars: number) {
+  const words = text.split(" ");
+  const lines: string[] = [];
+  let current = "";
+  for (const w of words) {
+    if ((current + " " + w).trim().length > maxChars && current) {
+      lines.push(current.trim());
+      current = w;
+    } else {
+      current = (current + " " + w).trim();
+    }
+  }
+  if (current) lines.push(current);
+  return lines;
+}
+
+const bioNameLines = wrapLines(bioregionName, 16);
+const bioDescLines = wrapLines(shorten(bioregionDescription, 80), 28).slice(0, 2);
+
+const bioNameLineHeight = 19;
+const bioDescLineHeight = 14;
+const bioDescGap = 8;
+const bioTextHeight =
+  bioNameLines.length * bioNameLineHeight + bioDescGap + bioDescLines.length * bioDescLineHeight;
+const bioH = Math.max(118, bioTextHeight + 44);
+const bioNameStartY = bioY - bioTextHeight / 2 + bioNameLineHeight * 0.75;
+const bioDescStartY = bioNameStartY + bioNameLines.length * bioNameLineHeight + bioDescGap;
 
 const csStartY = (height - csHeight) / 2;
 const sisStartY = (height - sisHeight) / 2;
@@ -80,209 +113,218 @@ const maxLinked = Math.max(
   1
 );
 
-function slugify(text: string) {
-  return text
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/(^-|-$)/g, "");
-}
-
-function truncate(text: string, max: number) {
-  return text.length > max ? text.slice(0, max - 1).trim() + "\u2026" : text;
-}
-
-function wrapLines(text: string, maxChars: number) {
-  const words = text.split(" ");
-  const lines: string[] = [];
-  let current = "";
-  for (const w of words) {
-    if ((current + " " + w).trim().length > maxChars && current) {
-      lines.push(current.trim());
-      current = w;
-    } else {
-      current = (current + " " + w).trim();
-    }
-  }
-  if (current) lines.push(current);
-  return lines;
-}
-
 function curve(x1: number, y1: number, x2: number, y2: number, strength = 0.5) {
   const dx = x2 - x1;
   const mx = x1 + dx * strength;
   return `M${x1},${y1} C${mx},${y1} ${mx},${y2} ${x2},${y2}`;
 }
 
-const bioLines = wrapLines(bioregionName, 18);
-const bioDescLines = wrapLines(bioregionDescription, 26);
 ---
 
-<div style="overflow-x:auto;-webkit-overflow-scrolling:touch">
-<svg
-  width="100%"
-  style={`min-width:${Math.min(width, 720)}px;background:var(--paper)`}
-  viewBox={`0 0 ${width} ${height}`}
-  role="img"
-  xmlns="http://www.w3.org/2000/svg"
->
-  <title>Flow diagram of {bioregionName}'s systemic innovations feeding critical shifts</title>
-  <desc>
-    {innovations.length} systemic innovations connect through {shifts.length} critical shifts toward {bioregionName}'s overall regenerative change.
-  </desc>
+<div class="flow-wrap">
+  <svg
+    width="100%"
+    height="auto"
+    viewBox={`0 0 ${width} ${height}`}
+    preserveAspectRatio="xMidYMid meet"
+    role="img"
+    xmlns="http://www.w3.org/2000/svg"
+  >
+    <title>Flow diagram of {bioregionName}'s systemic innovations feeding critical shifts</title>
+    <desc>
+      {innovations.length} systemic innovations connect through {shifts.length} critical shifts toward {bioregionName}'s overall regenerative change.
+    </desc>
 
-  <defs>
-    <filter id="softShadow" x="-20%" y="-20%" width="140%" height="140%">
-      <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#20404f" flood-opacity="0.08" />
-    </filter>
-  </defs>
+    <defs>
+      <filter id="softShadow" x="-20%" y="-20%" width="140%" height="140%">
+        <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#20404f" flood-opacity="0.08" />
+      </filter>
+    </defs>
 
-  {/* SIS → CS lines */}
-  {innovPositions.map((inv) =>
-    inv.tags.map((tagSlug) => {
-      const s = shiftBySlug.get(tagSlug);
-      if (!s) return null;
+    {/* SIS → CS lines */}
+    {innovPositions.map((inv) =>
+      inv.tags.map((tagSlug) => {
+        const s = shiftBySlug.get(tagSlug);
+        if (!s) return null;
+        return (
+          <path
+            d={curve(sisX, inv.y, csX + csW, s.y)}
+            fill="none"
+            stroke={s.color}
+            stroke-width="2.5"
+            opacity="0.45"
+          />
+        );
+      })
+    )}
+
+    {/* CS → Bioregion lines */}
+    {shiftPositions.map((s) => {
+      const count = innovations.filter((i) => i.tags.includes(s.slug)).length;
+      const strength = count / maxLinked;
       return (
         <path
-          d={curve(sisX, inv.y, csX + csW, s.y)}
+          d={curve(csX, s.y, bioX + bioW / 2, bioY)}
           fill="none"
           stroke={s.color}
-          stroke-width="2.5"
-          opacity="0.45"
+          stroke-width={2 + strength * 5}
+          opacity={0.35 + strength * 0.45}
         />
       );
-    })
-  )}
+    })}
 
-  {/* CS → Bioregion lines */}
-  {shiftPositions.map((s) => {
-    const count = innovations.filter((i) => i.tags.includes(s.slug)).length;
-    const strength = count / maxLinked;
-    return (
-      <path
-        d={curve(csX, s.y, bioX + bioW / 2, bioY)}
-        fill="none"
-        stroke={s.color}
-        stroke-width={2 + strength * 5}
-        opacity={0.35 + strength * 0.45}
-      />
-    );
-  })}
+    {/* Bioregion rounded square */}
+    <rect
+      x={bioX - bioW / 2}
+      y={bioY - bioH / 2}
+      width={bioW}
+      height={bioH}
+      rx="20"
+      fill="var(--paper-raised)"
+      stroke="var(--bwl-primary)"
+      stroke-width="2"
+      filter="url(#softShadow)"
+    />
+    <rect
+      x={bioX - bioW / 2 + 6}
+      y={bioY - bioH / 2 + 6}
+      width={bioW - 12}
+      height={bioH - 12}
+      rx="16"
+      fill="none"
+      stroke="var(--bwl-secondary)"
+      stroke-width="1"
+      opacity="0.35"
+    />
 
-  {/* Bioregion rounded square */}
-  <rect
-    x={bioX - bioW / 2}
-    y={bioY - bioH / 2}
-    width={bioW}
-    height={bioH}
-    rx="28"
-    fill="var(--paper-raised)"
-    stroke="var(--bwl-primary)"
-    stroke-width="2"
-    filter="url(#softShadow)"
-  />
-  <rect
-    x={bioX - bioW / 2 + 8}
-    y={bioY - bioH / 2 + 8}
-    width={bioW - 16}
-    height={bioH - 16}
-    rx="22"
-    fill="none"
-    stroke="var(--bwl-secondary)"
-    stroke-width="1"
-    opacity="0.35"
-  />
+    <SVGTextBlock
+      lines={bioNameLines}
+      x={bioX}
+      y={bioNameStartY}
+      lineHeight="1.25em"
+      anchor="middle"
+      style="font-family:var(--font-display);font-size:15px;font-weight:bold;fill:var(--bwl-primary);"
+    />
+    <SVGTextBlock
+      lines={bioDescLines}
+      x={bioX}
+      y={bioDescStartY}
+      lineHeight="1.35em"
+      anchor="middle"
+      style="font-family:var(--font-body);font-size:9.5px;fill:var(--bwl-text);opacity:0.85;"
+    />
 
-  <foreignObject x={bioX - bioW / 2 + 20} y={bioY - bioH / 2 + 20} width={bioW - 40} height={bioH - 40}>
-    <div xmlns="http://www.w3.org/1999/xhtml" style="height:100%;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;">
-      <div style="font-family:var(--font-display);font-size:18px;font-weight:bold;color:var(--bwl-primary);line-height:1.25;margin-bottom:10px;">
-        {bioLines.map((line) => (
-          <div>{line}</div>
-        ))}
-      </div>
-      <div style="font-family:var(--font-body);font-size:12px;color:var(--bwl-text);line-height:1.5;opacity:0.85;">
-        {bioDescLines.map((line) => (
-          <div>{line}</div>
-        ))}
-      </div>
-    </div>
-  </foreignObject>
+    {/* Critical Shifts */}
+    {shiftPositions.map((s) => {
+      const emoji = s.emoji || "";
+      const nameLines = wrapLines(shorten(`${emoji} ${s.name}`.trim(), 30), 20);
+      const leverageLines = wrapLines(shorten(s.leveragePoint, 45), 28);
+      const blockHeight = nameLines.length * 14.5 + 3 + leverageLines.length * 12.5;
+      const nameY = s.y - blockHeight / 2 + 11;
+      const leverageY = nameY + nameLines.length * 14.5 + 3;
+      return (
+        <g>
+          <rect
+            x={csX}
+            y={s.y - 30}
+            width={csW}
+            height="60"
+            rx="30"
+            fill="var(--paper-raised)"
+            stroke={s.color}
+            stroke-width="2"
+            filter="url(#softShadow)"
+          />
+          <circle cx={csX + 24} cy={s.y} r="4" fill={s.color} />
+          <SVGTextBlock
+            lines={nameLines}
+            x={csX + 42}
+            y={nameY}
+            lineHeight="1.2em"
+            style="font-family:var(--font-display);font-size:12px;font-weight:bold;fill:var(--bwl-primary);"
+          />
+          <SVGTextBlock
+            lines={leverageLines}
+            x={csX + 42}
+            y={leverageY}
+            lineHeight="1.3em"
+            style="font-family:var(--font-body);font-size:9.5px;fill:var(--bwl-text);opacity:0.85;"
+          />
+        </g>
+      );
+    })}
 
-  {/* Critical Shifts */}
-  {shiftPositions.map((s, i) => {
-    const emoji = s.emoji || "";
-    return (
-      <g>
-        <rect
-          x={csX}
-          y={s.y - 34}
-          width={csW}
-          height="68"
-          rx="34"
-          fill="var(--paper-raised)"
-          stroke={s.color}
-          stroke-width="2"
-          filter="url(#softShadow)"
-        />
-        <circle cx={csX + 30} cy={s.y} r="5" fill={s.color} />
-        <foreignObject x={csX + 45} y={s.y - 28} width={csW - 60} height="56">
-          <div xmlns="http://www.w3.org/1999/xhtml" style="height:100%;display:flex;flex-direction:column;justify-content:center;">
-            <div style="font-family:var(--font-display);font-size:14px;font-weight:bold;color:var(--bwl-primary);line-height:1.2;">
-              {emoji} {truncate(s.name, 34)}
-            </div>
-            <div style="font-family:var(--font-body);font-size:10.5px;color:var(--bwl-text);line-height:1.35;margin-top:3px;opacity:0.85;">
-              {truncate(s.leveragePoint, 55)}
-            </div>
-          </div>
-        </foreignObject>
-      </g>
-    );
-  })}
-
-  {/* Systemic Innovations */}
-  {innovPositions.map((inv, i) => {
-    const untagged = inv.tags.length === 0;
-    return (
-      <g>
-        <rect
-          x={sisX}
-          y={inv.y - 36}
-          width={sisW}
-          height="72"
-          rx="12"
-          fill={untagged ? "var(--paper-raised)" : "#ffffff"}
-          stroke={untagged ? "var(--bwl-muted)" : "var(--line-strong)"}
-          stroke-width="1.5"
-          stroke-dasharray={untagged ? "4,3" : "none"}
-          filter="url(#softShadow)"
-        />
-        <foreignObject x={sisX + 14} y={inv.y - 30} width={sisW - 50} height="60">
-          <div xmlns="http://www.w3.org/1999/xhtml" style="height:100%;display:flex;flex-direction:column;justify-content:center;">
-            <div style="font-family:var(--font-display);font-size:13.5px;font-weight:bold;color:var(--bwl-primary);line-height:1.25;">
-              {truncate(inv.name, 38)}
-            </div>
-            <div style="font-family:var(--font-body);font-size:10px;color:var(--bwl-text);line-height:1.35;margin-top:4px;opacity:0.85;">
-              {truncate(inv.description, 80)}
-            </div>
-          </div>
-        </foreignObject>
-        {inv.notionUrl && (
-          <a href={inv.notionUrl} target="_blank" rel="noopener">
-            <g>
-              <circle cx={sisX + sisW - 18} cy={inv.y + 18} r="10" fill="var(--bwl-secondary)" opacity="0.15" />
-              <text
-                x={sisX + sisW - 18}
-                y={inv.y + 22}
-                text-anchor="middle"
-                font-size="12"
-                fill="var(--bwl-primary)"
-                font-family="var(--font-body)"
-                font-weight="bold"
-              >↗</text>
-            </g>
-          </a>
-        )}
-      </g>
-    );
-  })}
-</svg>
+    {/* Systemic Innovations */}
+    {innovPositions.map((inv) => {
+      const untagged = inv.tags.length === 0;
+      const nameLines = wrapLines(shorten(inv.name, 32), 23);
+      const descLines = wrapLines(shorten(inv.description, 62), 34);
+      const blockHeight = nameLines.length * 13.5 + 3 + descLines.length * 11.5;
+      const nameY = inv.y - blockHeight / 2 + 10.5;
+      const descY = nameY + nameLines.length * 13.5 + 3;
+      return (
+        <g>
+          <rect
+            x={sisX}
+            y={inv.y - 30}
+            width={sisW}
+            height="60"
+            rx="10"
+            fill={untagged ? "var(--paper-raised)" : "#ffffff"}
+            stroke={untagged ? "var(--bwl-muted)" : "var(--line-strong)"}
+            stroke-width="1.5"
+            stroke-dasharray={untagged ? "4,3" : "none"}
+            filter="url(#softShadow)"
+          />
+          <SVGTextBlock
+            lines={nameLines}
+            x={sisX + 12}
+            y={nameY}
+            lineHeight="1.2em"
+            style="font-family:var(--font-display);font-size:11.5px;font-weight:bold;fill:var(--bwl-primary);"
+          />
+          <SVGTextBlock
+            lines={descLines}
+            x={sisX + 12}
+            y={descY}
+            lineHeight="1.3em"
+            style="font-family:var(--font-body);font-size:9px;fill:var(--bwl-text);opacity:0.85;"
+          />
+          {inv.notionUrl && (
+            <a href={inv.notionUrl} target="_blank" rel="noopener">
+              <g>
+                <circle cx={sisX + sisW - 15} cy={inv.y + 15} r="8" fill="var(--bwl-secondary)" opacity="0.15" />
+                <text
+                  x={sisX + sisW - 15}
+                  y={inv.y + 18}
+                  text-anchor="middle"
+                  font-size="10"
+                  fill="var(--bwl-primary)"
+                  font-family="var(--font-body)"
+                  font-weight="bold"
+                >↗</text>
+              </g>
+            </a>
+          )}
+        </g>
+      );
+    })}
+  </svg>
 </div>
+
+<style>
+  .flow-wrap {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .flow-wrap svg {
+    display: block;
+    width: 100%;
+    min-width: 560px;
+    height: auto;
+    max-width: 860px;
+    margin: 0 auto;
+    background: var(--paper);
+  }
+</style>
