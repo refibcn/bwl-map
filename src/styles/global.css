@@ -1,4 +1,23 @@
+@font-face {
+  font-family: "Sentinel Bold";
+  font-style: normal;
+  font-weight: bold;
+  font-display: swap;
+  src:
+    url("https://bioregionalweavinglabs.org/wp-content/uploads/2026/06/Sentinel-Bold.woff2") format("woff2"),
+    url("https://bioregionalweavinglabs.org/wp-content/uploads/2026/06/Sentinel-Bold-iF6618f54f7d67f.woff") format("woff");
+}
+
 :root {
+  /* BWL brand colours */
+  --bwl-primary: #20404f;
+  --bwl-secondary: #e2ad4f;
+  --bwl-text: #254c5f;
+  --bwl-accent: #f9f9f3;
+  --bwl-cream: #fffff0;
+  --bwl-muted: #a8b8bf;
+
+  /* Dark canvas for the diagram */
   --void: #0c1310;
   --void-raised: #131c17;
   --void-line: rgba(238, 242, 234, 0.1);
@@ -6,16 +25,9 @@
   --mist: #9caa9a;
   --mist-dim: #6d7a6b;
 
-  --c-culture: #e8a33c;
-  --c-education: #4fb6e8;
-  --c-ecosystems: #5bcb82;
-  --c-food: #a8c93c;
-  --c-value-chains: #e8703c;
-  --c-finance: #c99a4f;
-  --c-policy: #9c7fe8;
-
-  --font-display: "Fraunces", Georgia, serif;
-  --font-body: "Inter", system-ui, -apple-system, sans-serif;
+  /* Typography */
+  --font-display: "Sentinel Bold", Georgia, serif;
+  --font-body: "Lato", system-ui, -apple-system, sans-serif;
 }
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -30,15 +42,15 @@ body {
   font-size: 16px;
 }
 
-h1, h2, h3 {
+h1, h2, h3, h4 {
   font-family: var(--font-display);
-  font-weight: 500;
+  font-weight: bold;
   color: var(--paper);
   letter-spacing: -0.01em;
 }
 
 a { color: var(--paper); }
-a:hover { color: var(--c-education); }
+a:hover { color: var(--bwl-secondary); }
 
 .wrap {
   max-width: 1080px;
@@ -49,7 +61,7 @@ a:hover { color: var(--c-education); }
 .eyebrow {
   font-family: var(--font-body);
   font-size: 12px;
-  font-weight: 600;
+  font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.1em;
   color: var(--mist);
@@ -84,7 +96,7 @@ a:hover { color: var(--c-education); }
 
 .badge-soft {
   font-size: 11px;
-  font-weight: 600;
+  font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.05em;
   padding: 3px 9px;
@@ -138,7 +150,7 @@ details.shift-detail .body {
 
 details.shift-detail .body dt {
   font-size: 11px;
-  font-weight: 600;
+  font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.05em;
   color: var(--mist-dim);
