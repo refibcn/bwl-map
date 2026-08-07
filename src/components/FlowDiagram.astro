@@ -47,30 +47,28 @@ const PALETTE = [
   "#D4A84B", // light gold
 ];
 
-const width = 1000;
-const margin = { top: 48, right: 48, bottom: 48, left: 48 };
+const width = 880;
+const margin = { top: 36, right: 36, bottom: 36, left: 36 };
 
-const bioW = 170;
+const bioW = 180;
 const bioX = margin.left + bioW / 2;
-const csX = margin.left + bioW + 110;
-const csW = 230;
-const sisX = csX + csW + 110;
-const sisW = 280;
+const csX = margin.left + bioW + 80;
+const csW = 200;
+const sisX = csX + csW + 80;
+const sisW = 260;
 
-const rowHeight = 72;
-const csGap = 16;
-const sisGap = 12;
+const csCardH = 56;
+const sisCardH = 64;
+const rowHeight = 64;
+const csGap = 12;
+const sisGap = 10;
 
 const csHeight = shifts.length * rowHeight + (shifts.length - 1) * csGap;
 const sisHeight = innovations.length * rowHeight + (innovations.length - 1) * sisGap;
 const contentHeight = Math.max(csHeight, sisHeight);
-const height = contentHeight + margin.top + margin.bottom + 32;
+const height = contentHeight + margin.top + margin.bottom + 28;
 
 const bioY = height / 2;
-
-function shorten(text: string, max: number) {
-  return text.length > max ? text.slice(0, max - 1).trim() + "\u2026" : text;
-}
 
 function wrapLines(text: string, maxChars: number) {
   const words = text.split(" ");
@@ -88,20 +86,20 @@ function wrapLines(text: string, maxChars: number) {
   return lines;
 }
 
-const bioNameLines = wrapLines(bioregionName, 16);
-const bioDescLines = wrapLines(shorten(bioregionDescription || "", 80), 28).slice(0, 2);
+const bioNameLines = wrapLines(bioregionName, 18);
+const bioDescLines = wrapLines(bioregionDescription || "", 26).slice(0, 12);
 
-const bioNameLineHeight = 19;
-const bioDescLineHeight = 14;
-const bioDescGap = 8;
+const bioNameLineHeight = 17;
+const bioDescLineHeight = 12.5;
+const bioDescGap = 7;
 const bioTextHeight =
   bioNameLines.length * bioNameLineHeight + bioDescGap + bioDescLines.length * bioDescLineHeight;
-const bioH = Math.max(118, bioTextHeight + 44);
+const bioH = Math.max(110, bioTextHeight + 40);
 
-// Bioregion image sits above the bio box.
-const bioImageW = 130;
-const bioImageH = 88;
-const bioImageGap = 16;
+// Bioregion image sits above the card.
+const bioImageW = 120;
+const bioImageH = 78;
+const bioImageGap = 12;
 const bioBlockHeight = bioImageH + bioImageGap + bioH;
 const bioImageY = bioY - bioBlockHeight / 2;
 const bioBoxY = bioImageY + bioImageH + bioImageGap + bioH / 2;
@@ -155,10 +153,10 @@ function curve(x1: number, y1: number, x2: number, y2: number, strength = 0.5) {
         <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#20404f" flood-opacity="0.08" />
       </filter>
       <clipPath id="sisImgClip">
-        <rect width="44" height="44" rx="8" />
+        <rect width="44" height="44" rx="7" />
       </clipPath>
       <clipPath id="bioImgClip">
-        <rect width={bioImageW} height={bioImageH} rx="16" />
+        <rect width={bioImageW} height={bioImageH} rx="14" />
       </clipPath>
     </defs>
 
@@ -175,7 +173,7 @@ function curve(x1: number, y1: number, x2: number, y2: number, strength = 0.5) {
             d={curve(sisX, inv.y, csX + csW, s.y)}
             fill="none"
             stroke={s.color}
-            stroke-width="3"
+            stroke-width="2.5"
             opacity="0.45"
           />
         );
@@ -193,7 +191,7 @@ function curve(x1: number, y1: number, x2: number, y2: number, strength = 0.5) {
           d={curve(csX, s.y, bioX + bioW / 2, bioBoxY)}
           fill="none"
           stroke={s.color}
-          stroke-width={2.5 + strength * 5.5}
+          stroke-width={2 + strength * 5}
           opacity={0.35 + strength * 0.45}
         />
       );
@@ -218,18 +216,18 @@ function curve(x1: number, y1: number, x2: number, y2: number, strength = 0.5) {
       y={bioBoxY - bioH / 2}
       width={bioW}
       height={bioH}
-      rx="20"
+      rx="18"
       fill="var(--paper-raised)"
       stroke="var(--bwl-primary)"
       stroke-width="2"
       filter="url(#softShadow)"
     />
     <rect
-      x={bioX - bioW / 2 + 6}
-      y={bioBoxY - bioH / 2 + 6}
-      width={bioW - 12}
-      height={bioH - 12}
-      rx="16"
+      x={bioX - bioW / 2 + 5}
+      y={bioBoxY - bioH / 2 + 5}
+      width={bioW - 10}
+      height={bioH - 10}
+      rx="14"
       fill="none"
       stroke="var(--bwl-secondary)"
       stroke-width="1"
@@ -240,9 +238,9 @@ function curve(x1: number, y1: number, x2: number, y2: number, strength = 0.5) {
       lines={bioNameLines}
       x={bioX}
       y={bioNameStartY}
-      lineHeight="1.25em"
+      lineHeight="1.2em"
       anchor="middle"
-      style="font-family:var(--font-display);font-size:15px;font-weight:bold;fill:var(--bwl-primary);"
+      style="font-family:var(--font-display);font-size:14px;font-weight:bold;fill:var(--bwl-primary);"
     />
     <SVGTextBlock
       lines={bioDescLines}
@@ -250,44 +248,44 @@ function curve(x1: number, y1: number, x2: number, y2: number, strength = 0.5) {
       y={bioDescStartY}
       lineHeight="1.35em"
       anchor="middle"
-      style="font-family:var(--font-body);font-size:9.5px;fill:var(--bwl-text);opacity:0.85;"
+      style="font-family:var(--font-body);font-size:8.5px;fill:var(--bwl-text);opacity:0.85;"
     />
 
     {/* Critical Shifts */}
     {shiftPositions.map((s) => {
       const emoji = s.emoji || "";
-      const nameLines = wrapLines(shorten(`${emoji} ${s.name}`.trim(), 34), 24);
-      const leverageLines = wrapLines(shorten(s.leveragePoint || "", 55), 32);
-      const blockHeight = nameLines.length * 14.5 + 3 + leverageLines.length * 12.5;
-      const nameY = s.y - blockHeight / 2 + 11;
-      const leverageY = nameY + nameLines.length * 14.5 + 3;
+      const nameLines = wrapLines(`${emoji} ${s.name}`.trim(), 22);
+      const leverageLines = wrapLines(s.leveragePoint || "", 28).slice(0, 2);
+      const blockHeight = nameLines.length * 13.5 + 3 + leverageLines.length * 11;
+      const nameY = s.y - blockHeight / 2 + 10;
+      const leverageY = nameY + nameLines.length * 13.5 + 3;
       return (
         <g class={`card cs-card cs-${s.slug}`} data-cs={s.slug} tabindex="0">
           <rect
             x={csX}
-            y={s.y - 30}
+            y={s.y - csCardH / 2}
             width={csW}
-            height="60"
-            rx="30"
+            height={csCardH}
+            rx={csCardH / 2}
             fill="var(--paper-raised)"
             stroke={s.color}
             stroke-width="2"
             filter="url(#softShadow)"
           />
-          <circle cx={csX + 24} cy={s.y} r="4" fill={s.color} />
+          <circle cx={csX + 22} cy={s.y} r="4" fill={s.color} />
           <SVGTextBlock
             lines={nameLines}
-            x={csX + 42}
+            x={csX + 38}
             y={nameY}
             lineHeight="1.2em"
-            style="font-family:var(--font-display);font-size:12px;font-weight:bold;fill:var(--bwl-primary);"
+            style="font-family:var(--font-display);font-size:11px;font-weight:bold;fill:var(--bwl-primary);"
           />
           <SVGTextBlock
             lines={leverageLines}
-            x={csX + 42}
+            x={csX + 38}
             y={leverageY}
             lineHeight="1.3em"
-            style="font-family:var(--font-body);font-size:9.5px;fill:var(--bwl-text);opacity:0.85;"
+            style="font-family:var(--font-body);font-size:9px;fill:var(--bwl-text);opacity:0.85;"
           />
         </g>
       );
@@ -296,12 +294,12 @@ function curve(x1: number, y1: number, x2: number, y2: number, strength = 0.5) {
     {/* Systemic Innovations */}
     {innovPositions.map((inv) => {
       const untagged = inv.tags.length === 0;
-      const nameLines = wrapLines(shorten(inv.name || "", 34), 24);
-      const descLines = wrapLines(shorten(inv.description || "", 60), 34);
-      const blockHeight = nameLines.length * 13.5 + 3 + descLines.length * 11.5;
-      const nameY = inv.y - blockHeight / 2 + 10.5;
-      const descY = nameY + nameLines.length * 13.5 + 3;
-      const textX = sisX + 60;
+      const nameLines = wrapLines(inv.name || "", 24);
+      const descLines = wrapLines(inv.description || "", 34).slice(0, 3);
+      const blockHeight = nameLines.length * 13 + 3 + descLines.length * 11;
+      const nameY = inv.y - blockHeight / 2 + 10;
+      const descY = nameY + nameLines.length * 13 + 3;
+      const textX = sisX + 58;
       return (
         <g
           class={`card sis-card sis-${inv.slug}`}
@@ -311,9 +309,9 @@ function curve(x1: number, y1: number, x2: number, y2: number, strength = 0.5) {
         >
           <rect
             x={sisX}
-            y={inv.y - 30}
+            y={inv.y - sisCardH / 2}
             width={sisW}
-            height="60"
+            height={sisCardH}
             rx="10"
             fill={untagged ? "var(--paper-raised)" : "#ffffff"}
             stroke={untagged ? "var(--bwl-muted)" : "var(--line-strong)"}
@@ -336,25 +334,25 @@ function curve(x1: number, y1: number, x2: number, y2: number, strength = 0.5) {
             lines={nameLines}
             x={textX}
             y={nameY}
-            lineHeight="1.2em"
-            style="font-family:var(--font-display);font-size:11.5px;font-weight:bold;fill:var(--bwl-primary);"
+            lineHeight="1.15em"
+            style="font-family:var(--font-display);font-size:11px;font-weight:bold;fill:var(--bwl-primary);"
           />
           <SVGTextBlock
             lines={descLines}
             x={textX}
             y={descY}
             lineHeight="1.3em"
-            style="font-family:var(--font-body);font-size:9px;fill:var(--bwl-text);opacity:0.85;"
+            style="font-family:var(--font-body);font-size:8.5px;fill:var(--bwl-text);opacity:0.85;"
           />
           {inv.notionUrl && (
             <a href={inv.notionUrl} target="_blank" rel="noopener">
               <g>
-                <circle cx={sisX + sisW - 15} cy={inv.y + 15} r="8" fill="var(--bwl-secondary)" opacity="0.15" />
+                <circle cx={sisX + sisW - 14} cy={inv.y + 16} r="7" fill="var(--bwl-secondary)" opacity="0.15" />
                 <text
-                  x={sisX + sisW - 15}
-                  y={inv.y + 18}
+                  x={sisX + sisW - 14}
+                  y={inv.y + 18.5}
                   text-anchor="middle"
-                  font-size="10"
+                  font-size="9"
                   fill="var(--bwl-primary)"
                   font-family="var(--font-body)"
                   font-weight="bold"
@@ -410,8 +408,10 @@ function curve(x1: number, y1: number, x2: number, y2: number, strength = 0.5) {
   .flow-wrap svg {
     display: block;
     width: 100%;
-    min-width: 560px;
+    min-width: 480px;
     height: auto;
+    max-width: 900px;
+    max-height: 85vh;
     margin: 0 auto;
     background: var(--paper);
   }
@@ -436,7 +436,7 @@ function curve(x1: number, y1: number, x2: number, y2: number, strength = 0.5) {
 
   .flow-wrap svg.has-active .conn.active {
     opacity: 0.95 !important;
-    stroke-width: 4.5px;
+    stroke-width: 4px;
   }
   .flow-wrap svg.has-active .card.active {
     opacity: 1;

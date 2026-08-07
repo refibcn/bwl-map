@@ -1,5 +1,5 @@
 import type { Loader } from "astro/loaders";
-import { readFileSync } from "node:fs";
+import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 
@@ -89,6 +89,52 @@ function getFirstFileUrl(props: any, key: string): string | null {
   return null;
 }
 
+function sanitizeFilename(name: string) {
+  return name
+    .toLowerCase()
+    .replace(/[^a-z0-9.]+/g, "-")
+    .replace(/(^-|-$)/g, "");
+}
+
+async function downloadImage(
+  url: string,
+  filename: string,
+  imagesDir: string,
+  logger: any
+): Promise<string | null> {
+  try {
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
+    const buffer = Buffer.from(await res.arrayBuffer());
+    const outPath = join(imagesDir, filename);
+    writeFileSync(outPath, buffer);
+    return `/images/${filename}`;
+  } catch (err) {
+    logger.warn(`Failed to download image ${url}: ${(err as Error).message}`);
+    return null;
+  }
+}
+
+async function resolveImageUrl(
+  props: any,
+  key: string,
+  prefix: string,
+  imagesDir: string,
+  logger: any
+): Promise<string | null> {
+  const files = props[key]?.files;
+  if (!Array.isArray(files) || files.length === 0) return null;
+  const file = files[0];
+  if (file.type === "external") return file.external?.url || null;
+  if (file.type !== "file") return null;
+  const url = file.file?.url;
+  const name = file.name || "image";
+  if (!url) return null;
+  const filename = `${prefix}-${sanitizeFilename(name)}`;
+  const local = await downloadImage(url, filename, imagesDir, logger);
+  return local || url;
+}
+
 function slugify(text: string) {
   return text
     .toLowerCase()
@@ -152,6 +198,11 @@ export function notionBioregionLoader(): Loader {
   return {
     name: "notion-bioregions",
     load: async ({ store, logger }) => {
+      const __dirname = dirname(fileURLToPath(import.meta.url));
+      const projectRoot = dirname(__dirname);
+      const imagesDir = join(projectRoot, "public", "images");
+      mkdirSync(imagesDir, { recursive: true });
+
       const token = import.meta.env.NOTION_TOKEN || process.env.NOTION_TOKEN;
       if (!token) {
         logger.warn("NOTION_TOKEN not found; falling back to local fixture");
@@ -209,23 +260,31 @@ export function notionBioregionLoader(): Loader {
           return id ? [id, s.slug] : ["", ""];
         }).filter(([id]) => id));
 
-        const bioInnovations = systemicInnovations
+        const bioInnovationsRaw = systemicInnovations
           .filter((i) => getRelationIds(i.properties, "Bioregion").includes(bioId))
-          .filter((i) => getStatus(i.properties, "Website Status") === "publish")
-          .map((i) => {
+          .filter((i) => getStatus(i.properties, "Website Status") === "publish");
+
+        const bioInnovations = await Promise.all(
+          bioInnovationsRaw.map(async (i) => {
             const tags = getRelationIds(i.properties, "Critical Shifts Tags")
               .map((id) => shiftSlugById.get(id))
               .filter(Boolean) as string[];
+            const slug = getRichText(i.properties, "URL slug") || slugify(getTitle(i.properties));
             return {
-              slug: getRichText(i.properties, "URL slug") || slugify(getTitle(i.properties)),
+              slug,
               name: getTitle(i.properties),
               description: getRichText(i.properties, "short description") || getRichText(i.properties, "Description"),
               tags,
               depth: getCheckbox(i.properties, "Case Study") ? "story" : "core",
               notionUrl: getUrl(i.properties, "Website") || getUrl(i.properties, "Learn More") || null,
-              imageUrl: getFirstFileUrl(i.properties, "Files & Media"),
+              imageUrl: await resolveImageUrl(i.properties, "Files & Media", slug, imagesDir, logger),
             };
-          });
+          })
+        );
+
+        // Only keep critical shifts that have at least one published SIS linked.
+        const linkedShiftSlugs = new Set(bioInnovations.flatMap((i) => i.tags));
+        const activeShifts = bioShifts.filter((s) => linkedShiftSlugs.has(s.slug));
 
         const entry: BioregionEntry = {
           id: bioId,
@@ -235,10 +294,10 @@ export function notionBioregionLoader(): Loader {
           location: getRichText(bio.properties, "Location"),
           intro: getRichText(bio.properties, "Bioregion Description"),
           shortNarrative: getRichText(bio.properties, "short weaving narrative") || getRichText(bio.properties, "Bioregion Description"),
-          imageUrl: getFirstFileUrl(bio.properties, "Thumbnail Image"),
+          imageUrl: await resolveImageUrl(bio.properties, "Thumbnail Image", bioSlug, imagesDir, logger),
           notionUrl: bio.url,
           active: true,
-          criticalShifts: bioShifts,
+          criticalShifts: activeShifts,
           systemicInnovations: bioInnovations,
         };
 

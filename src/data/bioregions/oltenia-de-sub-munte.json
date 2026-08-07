@@ -4,7 +4,7 @@
   "country": "Romania",
   "location": "Vâlcea county, sub-Carpathian foothills",
   "intro": "A belt of forested foothills and limestone ridges beneath the Southern Carpathians, where beech forest, karst gorges and a scatter of small spa towns and mountain villages meet. The portfolio here works through rural culture, ecosystem protection and heritage-led regeneration — most visibly through the Junior Ranger conservation education programme, the Pietrari Participation Library, and Govora Heritage Lab's regeneration of a declining spa town.",
-  "shortNarrative": "Carpathian foothills weaving culture and ecosystems.",
+  "shortNarrative": "Oltenia de sub Munte, led by Kogayon Association, weaves together rural culture, ecosystem restoration and heritage-led regeneration in the forested foothills of Romania's Southern Carpathians. The portfolio grows through education, community ownership and place-based policy, turning small mountain villages and spa towns into living laboratories for bioregional change.",
   "imageUrl": "https://placehold.co/300x200/20404f/FFFFF0?text=Oltenia",
   "notionUrl": "https://www.notion.so/Oltenia-de-sub-Munte-Portfolio-29ab5c91195380d8bf7ed428b5f9d7bf?source=copy_link",
   "criticalShifts": [
@@ -63,7 +63,7 @@
       "slug": "ranger-junior",
       "name": "Ranger Junior",
       "tags": ["ecosystems", "education"],
-      "description": "Environmental education programme for children in the Vâlcea mountains.",
+      "description": "Kogayon environmental education programme engaging children and young people with mountain ecosystems through hands-on conservation activities and outdoor learning.",
       "depth": "story",
       "notionUrl": "https://app.notion.com/p/Ranger-Junior-583b5c91195383acb99001810fe35619?pvs=21",
       "imageUrl": "https://placehold.co/100x100/20404f/FFFFF0?text=RJ"
@@ -71,7 +71,7 @@
     {
       "slug": "pietrari-library",
       "name": "Pietrari Library",
-      "description": "A village library turned community hub for culture and learning.",
+      "description": "Rural library transformed into participation infrastructure, hosting workshops, cultural events and local knowledge-sharing in the village of Pietrari.",
       "tags": ["culture", "education", "value-chains"],
       "depth": "story",
       "notionUrl": "https://app.notion.com/p/Pietrari-Library-364b5c9119538082ae3af66bf2d28e30?pvs=21",
@@ -80,7 +80,7 @@
     {
       "slug": "govora-heritage-lab",
       "name": "Govora Heritage Lab",
-      "description": "Regenerating a historic spa town through culture and participation.",
+      "description": "Heritage lab turning Govora's spa heritage into community-rooted regeneration through culture, public space and participatory place-making.",
       "tags": ["culture"],
       "depth": "story",
       "notionUrl": "https://app.notion.com/p/Govora-Heritage-Lab-364b5c911953809db9b9e16b9bbe22f1?pvs=21",
@@ -89,7 +89,7 @@
     {
       "slug": "kogayon-association",
       "name": "Kogayon Association",
-      "description": "Membership-based NGO working for nature conservation and education.",
+      "description": "Romanian association protecting Oltenia's natural and cultural heritage through education, advocacy and community-based conservation programmes.",
       "tags": ["culture", "education", "policy"],
       "depth": "core",
       "notionUrl": "https://app.notion.com/p/Kogayon-Association-fa1b5c9119538394a43801728e89c0b0?pvs=21",
@@ -98,7 +98,7 @@
     {
       "slug": "network-urban-nature",
       "name": "The Network of Urban Nature",
-      "description": "Urban nature network connecting activists and practitioners across Romania.",
+      "description": "Romanian civil society network protecting urban nature through advocacy, mapping and collaborative green-space stewardship in cities.",
       "tags": ["ecosystems", "education", "policy"],
       "depth": "core",
       "notionUrl": "https://app.notion.com/p/The-Network-of-Urban-Nature-02fb5c9119538379947b811dca53b818?pvs=21",
@@ -107,7 +107,7 @@
     {
       "slug": "eco-ruralis",
       "name": "Eco Ruralis",
-      "description": "National association supporting peasants and agroecological farming.",
+      "description": "National association of peasants and organic farmers promoting agroecology, seed sovereignty and short food chains across Romania.",
       "tags": ["culture", "ecosystems", "food-agriculture"],
       "depth": "core",
       "notionUrl": "https://app.notion.com/p/Eco-Ruralis-f8cb5c91195382a29b8a811796b8e071?pvs=21",
@@ -116,7 +116,7 @@
     {
       "slug": "green-belt-bucharest",
       "name": "Green Belt of Bucharest",
-      "description": "Citizen-led green belt initiative for Bucharest-Ilfov region.",
+      "description": "Citizen-led green belt initiative envisioning a resilient ecological corridor around Bucharest through reforestation, wetlands and community land care.",
       "tags": ["ecosystems", "finance", "food-agriculture"],
       "depth": "core",
       "notionUrl": "https://app.notion.com/p/Green-Belt-of-Bucharest-Centura-Verde-Bucure-ti-Ilfov-Lupta-mpotriva-Polu-rii-269b5c911953822fbd5d81eacf03083c?pvs=21",
@@ -125,7 +125,7 @@
     {
       "slug": "alpa",
       "name": "ALPA",
-      "description": "Land for Life organisation protecting farmland and rural livelihoods.",
+      "description": "Land for Life organisation protecting farmland and rural livelihoods in Țara Călatei through community ownership and regenerative agriculture.",
       "tags": ["culture", "finance", "food-agriculture"],
       "depth": "core",
       "notionUrl": "https://app.notion.com/p/ALPA-283b5c911953838b967001c504fd5cb8?pvs=21",
