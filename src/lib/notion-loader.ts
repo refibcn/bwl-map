@@ -25,6 +25,7 @@ export interface SystemicInnovation {
   tags: string[];
   depth: "core" | "story";
   notionUrl: string | null;
+  imageUrl: string | null;
 }
 
 export interface BioregionEntry {
@@ -34,6 +35,8 @@ export interface BioregionEntry {
   country: string;
   location: string;
   intro: string;
+  shortNarrative: string;
+  imageUrl: string | null;
   notionUrl: string;
   active: boolean;
   criticalShifts: CriticalShift[];
@@ -65,12 +68,25 @@ function getCheckbox(props: any, key: string) {
   return props[key]?.checkbox || false;
 }
 
+function getStatus(props: any, key: string) {
+  return props[key]?.status?.name || props[key]?.select?.name || "";
+}
+
 function getRelationIds(props: any, key: string) {
   return props[key]?.relation?.map((r: any) => r.id) || [];
 }
 
 function getUrl(props: any, key: string) {
   return props[key]?.url || "";
+}
+
+function getFirstFileUrl(props: any, key: string): string | null {
+  const files = props[key]?.files;
+  if (!Array.isArray(files) || files.length === 0) return null;
+  const file = files[0];
+  if (file.type === "file") return file.file?.url || null;
+  if (file.type === "external") return file.external?.url || null;
+  return null;
 }
 
 function slugify(text: string) {
@@ -195,6 +211,7 @@ export function notionBioregionLoader(): Loader {
 
         const bioInnovations = systemicInnovations
           .filter((i) => getRelationIds(i.properties, "Bioregion").includes(bioId))
+          .filter((i) => getStatus(i.properties, "Website Status") === "publish")
           .map((i) => {
             const tags = getRelationIds(i.properties, "Critical Shifts Tags")
               .map((id) => shiftSlugById.get(id))
@@ -202,10 +219,11 @@ export function notionBioregionLoader(): Loader {
             return {
               slug: getRichText(i.properties, "URL slug") || slugify(getTitle(i.properties)),
               name: getTitle(i.properties),
-              description: getRichText(i.properties, "Description"),
+              description: getRichText(i.properties, "short description") || getRichText(i.properties, "Description"),
               tags,
               depth: getCheckbox(i.properties, "Case Study") ? "story" : "core",
               notionUrl: getUrl(i.properties, "Website") || getUrl(i.properties, "Learn More") || null,
+              imageUrl: getFirstFileUrl(i.properties, "Files & Media"),
             };
           });
 
@@ -216,6 +234,8 @@ export function notionBioregionLoader(): Loader {
           country: getSelect(bio.properties, "Country"),
           location: getRichText(bio.properties, "Location"),
           intro: getRichText(bio.properties, "Bioregion Description"),
+          shortNarrative: getRichText(bio.properties, "short weaving narrative") || getRichText(bio.properties, "Bioregion Description"),
+          imageUrl: getFirstFileUrl(bio.properties, "Thumbnail Image"),
           notionUrl: bio.url,
           active: true,
           criticalShifts: bioShifts,

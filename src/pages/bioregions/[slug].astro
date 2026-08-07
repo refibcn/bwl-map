@@ -14,25 +14,15 @@ export async function getStaticPaths() {
 const { entry } = Astro.props as any;
 const data = entry.data;
 
-// Short, display-friendly bioregion descriptions (1–2 lines in the diagram).
-// Fallback to the full Notion intro if no override is defined yet.
-const shortDescriptions: Record<string, string> = {
-  "oltenia-ro":
-    "Carpathian foothills weaving culture and ecosystems.",
-  "oltenia-de-sub-munte":
-    "Carpathian foothills weaving culture and ecosystems.",
-};
-// Match by route slug or name for resilience.
-const bioDescription =
-  shortDescriptions[data.slug] ||
-  shortDescriptions[data.name?.toLowerCase().replace(/\s+/g, "-")] ||
-  data.intro;
+// Use the dedicated short narrative from Notion when available.
+const bioDescription = data.shortNarrative || data.intro;
 ---
 
 <BaseLayout title={`${data.name} — BWL portfolio`}>
   <FlowDiagram
     bioregionName={data.name}
     bioregionDescription={bioDescription}
+    bioregionImageUrl={data.imageUrl}
     shifts={data.criticalShifts}
     innovations={data.systemicInnovations}
   />
