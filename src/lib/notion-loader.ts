@@ -122,17 +122,42 @@ async function resolveImageUrl(
   imagesDir: string,
   logger: any
 ): Promise<string | null> {
+  // Try a Files & Media property first.
   const files = props[key]?.files;
-  if (!Array.isArray(files) || files.length === 0) return null;
-  const file = files[0];
-  if (file.type === "external") return file.external?.url || null;
-  if (file.type !== "file") return null;
-  const url = file.file?.url;
-  const name = file.name || "image";
-  if (!url) return null;
-  const filename = `${prefix}-${sanitizeFilename(name)}`;
-  const local = await downloadImage(url, filename, imagesDir, logger);
-  return local || url;
+  if (Array.isArray(files) && files.length > 0) {
+    const file = files[0];
+    if (file.type === "external") return file.external?.url || null;
+    if (file.type === "file") {
+      const url = file.file?.url;
+      const name = file.name || "image";
+      if (!url) return null;
+      const filename = `${prefix}-${sanitizeFilename(name)}`;
+      const local = await downloadImage(url, filename, imagesDir, logger);
+      return local || url;
+    }
+  }
+
+  // Fall back to a URL property (e.g. "Thumbnail Image" as URL).
+  const urlProp = props[key]?.url;
+  if (urlProp) return urlProp;
+
+  return null;
+}
+
+async function resolvePageIcon(
+  page: any,
+  prefix: string,
+  imagesDir: string,
+  logger: any
+): Promise<string | null> {
+  if (page.icon?.type === "external") return page.icon.external?.url || null;
+  if (page.icon?.type === "file") {
+    const url = page.icon.file?.url;
+    if (!url) return null;
+    const local = await downloadImage(url, `${prefix}-icon`, imagesDir, logger);
+    return local || url;
+  }
+  return null;
 }
 
 function slugify(text: string) {
@@ -294,7 +319,10 @@ export function notionBioregionLoader(): Loader {
           location: getRichText(bio.properties, "Location"),
           intro: getRichText(bio.properties, "Bioregion Description"),
           shortNarrative: getRichText(bio.properties, "short weaving narrative") || getRichText(bio.properties, "Bioregion Description"),
-          imageUrl: await resolveImageUrl(bio.properties, "Thumbnail Image", bioSlug, imagesDir, logger),
+          imageUrl:
+            (await resolveImageUrl(bio.properties, "Thumbnail Image", bioSlug, imagesDir, logger)) ||
+            (await resolvePageIcon(bio, bioSlug, imagesDir, logger)) ||
+            null,
           notionUrl: bio.url,
           active: true,
           criticalShifts: activeShifts,
