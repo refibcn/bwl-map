@@ -1,6 +1,7 @@
 ---
 import SVGTextBlock from "./SVGTextBlock.astro";
 import { notionImageUrl } from "../lib/images";
+import { wrapToWidth } from "../lib/text";
 
 interface Shift {
   slug: string;
@@ -106,8 +107,19 @@ function wrapLines(text: string, maxChars: number) {
   return lines;
 }
 
-const bioNameLines = wrapLines(bioregionName, 20);
-const bioDescLines = wrapLines(bioregionDescription || "", 28);
+// --- Bioregion card text: width-based wrapping (generic format controller) ---
+const BIO_TEXT_INSET = 20;
+const bioTextWidth = bioW - BIO_TEXT_INSET * 2;
+const bioTextX = bioX - bioW / 2 + BIO_TEXT_INSET;
+const bioNameFont = 15;
+const bioDescFont = 9;
+const bioNameLines = wrapToWidth(bioregionName || "", bioTextWidth, bioNameFont, "display");
+const bioDescLines = wrapToWidth(bioregionDescription || "", bioTextWidth, bioDescFont, "body");
+if (bioNameLines.length > 2 || bioDescLines.length > 6) {
+  console.warn(
+    `[bwl-map] "${bioregionName}": title wraps to ${bioNameLines.length} line(s), description to ${bioDescLines.length} (max recommended: 2 / 6)`
+  );
+}
 const bioDescGap = bioDescLines.length ? 8 : 0;
 const bioTextHeight =
   bioNameLines.length * bioNameLineHeight + bioDescGap + bioDescLines.length * bioDescLineHeight;
@@ -283,19 +295,19 @@ function curve(x1: number, y1: number, x2: number, y2: number, strength = 0.5) {
 
     <SVGTextBlock
       lines={bioNameLines}
-      x={bioX}
+      x={bioTextX}
       y={bioNameStartY}
       lineHeight="1.2em"
-      anchor="middle"
-      style="font-family:var(--font-display);font-size:15px;font-weight:bold;fill:var(--bwl-primary);"
+      anchor="start"
+      style={`font-family:var(--font-display);font-size:${bioNameFont}px;font-weight:bold;fill:var(--bwl-primary);`}
     />
     <SVGTextBlock
       lines={bioDescLines}
-      x={bioX}
+      x={bioTextX}
       y={bioDescStartY}
       lineHeight="1.3em"
-      anchor="middle"
-      style="font-family:var(--font-body);font-size:9px;fill:var(--bwl-text);opacity:0.85;"
+      anchor="start"
+      style={`font-family:var(--font-body);font-size:${bioDescFont}px;fill:var(--bwl-text);opacity:0.85;`}
     />
 
     {/* Critical Shifts */}

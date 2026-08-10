@@ -13,8 +13,6 @@ const { lines, x, y, lineHeight, anchor = "start", style } = Astro.props;
 
 <text x={x} y={y} text-anchor={anchor} style={style}>
   {lines.map((line, i) => (
-    <tspan x={x} dy={i === 0 ? 0 : lineHeight}>
-      {line}
-    </tspan>
+    <tspan x={x} dy={i === 0 ? 0 : lineHeight}>{line}</tspan>
   ))}
 </text>

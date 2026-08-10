@@ -134,6 +134,19 @@ async function downloadImage(
   }
 }
 
+/** Find a property key by exact name, falling back to a case-insensitive match. */
+function findPropertyKey(props: any, ...names: string[]): string | null {
+  const keys = Object.keys(props);
+  for (const name of names) {
+    const exact = keys.find((k) => k === name);
+    if (exact) return exact;
+    const lower = name.toLowerCase();
+    const fuzzy = keys.find((k) => k.toLowerCase() === lower);
+    if (fuzzy) return fuzzy;
+  }
+  return null;
+}
+
 async function resolveImage(
   props: any,
   key: string,
@@ -141,8 +154,11 @@ async function resolveImage(
   imagesDir: string,
   logger: any
 ): Promise<{ file: string | null; url: string | null }> {
+  const propKey = findPropertyKey(props, key);
+  if (!propKey) return { file: null, url: null };
+
   // Try a Files & Media property first.
-  const files = props[key]?.files;
+  const files = props[propKey]?.files;
   if (Array.isArray(files) && files.length > 0) {
     const file = files[0];
     if (file.type === "external") return { file: null, url: file.external?.url || null };
@@ -156,7 +172,7 @@ async function resolveImage(
   }
 
   // Fall back to a URL property (e.g. "Thumbnail Image" as URL).
-  const urlProp = props[key]?.url;
+  const urlProp = props[propKey]?.url;
   if (urlProp) return { file: null, url: urlProp };
 
   return { file: null, url: null };
@@ -241,6 +257,10 @@ export function notionBioregionLoader(): Loader {
   return {
     name: "notion-bioregions",
     load: async ({ store, logger }) => {
+      // Drop entries from previous syncs (e.g. the local fixture) so stale
+      // pages never survive into a new build.
+      store.clear();
+
       // Download Notion files into src/assets/notion-images/, resolved at build
       // time via import.meta.glob in src/lib/images.ts. NOT public/ — files
       // written there mid-build are not reliably copied to dist/.
@@ -332,7 +352,7 @@ export function notionBioregionLoader(): Loader {
         const linkedShiftSlugs = new Set(bioInnovations.flatMap((i) => i.tags));
         const activeShifts = bioShifts.filter((s) => linkedShiftSlugs.has(s.slug));
 
-        const thumb = await resolveImage(bio.properties, "Thumbnail Image", bioSlug, imagesDir, logger);
+        const thumb = await resolveImage(bio.properties, "Thumbnail image", bioSlug, imagesDir, logger);
         const icon =
           thumb.file || thumb.url ? { file: null, url: null } : await resolvePageIcon(bio, bioSlug, imagesDir, logger);
 
