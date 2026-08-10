@@ -25,7 +25,10 @@ export interface SystemicInnovation {
   tags: string[];
   depth: "core" | "story";
   notionUrl: string | null;
+  /** Original remote URL (fallback; Notion signed URLs expire). */
   imageUrl: string | null;
+  /** Local filename in src/assets/notion-images/ (downloaded at build time). */
+  imageFile: string | null;
 }
 
 export interface BioregionEntry {
@@ -36,7 +39,10 @@ export interface BioregionEntry {
   location: string;
   intro: string;
   shortNarrative: string;
+  /** Original remote URL (fallback; Notion signed URLs expire). */
   imageUrl: string | null;
+  /** Local filename in src/assets/notion-images/ (downloaded at build time). */
+  imageFile: string | null;
   notionUrl: string;
   active: boolean;
   criticalShifts: CriticalShift[];
@@ -80,15 +86,6 @@ function getUrl(props: any, key: string) {
   return props[key]?.url || "";
 }
 
-function getFirstFileUrl(props: any, key: string): string | null {
-  const files = props[key]?.files;
-  if (!Array.isArray(files) || files.length === 0) return null;
-  const file = files[0];
-  if (file.type === "file") return file.file?.url || null;
-  if (file.type === "external") return file.external?.url || null;
-  return null;
-}
-
 function sanitizeFilename(name: string) {
   return name
     .toLowerCase()
@@ -96,6 +93,28 @@ function sanitizeFilename(name: string) {
     .replace(/(^-|-$)/g, "");
 }
 
+const IMAGE_EXTENSIONS = new Set(["jpg", "jpeg", "png", "webp", "gif", "svg", "avif"]);
+const CONTENT_TYPE_EXTENSIONS: Record<string, string> = {
+  "image/jpeg": "jpg",
+  "image/png": "png",
+  "image/webp": "webp",
+  "image/gif": "gif",
+  "image/svg+xml": "svg",
+  "image/avif": "avif",
+};
+
+function ensureImageExtension(filename: string, contentType: string | null): string {
+  const ext = filename.split(".").pop()?.toLowerCase() || "";
+  if (IMAGE_EXTENSIONS.has(ext)) return filename;
+  const mapped = contentType ? CONTENT_TYPE_EXTENSIONS[contentType.split(";")[0].trim()] : undefined;
+  return mapped ? `${filename}.${mapped}` : filename;
+}
+
+/**
+ * Download a Notion file into the build-time images dir.
+ * Returns the local filename (must match the import.meta.glob pattern in
+ * src/lib/images.ts), or null if the download failed.
+ */
 async function downloadImage(
   url: string,
   filename: string,
@@ -106,42 +125,41 @@ async function downloadImage(
     const res = await fetch(url);
     if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
     const buffer = Buffer.from(await res.arrayBuffer());
-    const outPath = join(imagesDir, filename);
-    writeFileSync(outPath, buffer);
-    return `/images/${filename}`;
+    const finalFilename = ensureImageExtension(filename, res.headers.get("content-type"));
+    writeFileSync(join(imagesDir, finalFilename), buffer);
+    return finalFilename;
   } catch (err) {
     logger.warn(`Failed to download image ${url}: ${(err as Error).message}`);
     return null;
   }
 }
 
-async function resolveImageUrl(
+async function resolveImage(
   props: any,
   key: string,
   prefix: string,
   imagesDir: string,
   logger: any
-): Promise<string | null> {
+): Promise<{ file: string | null; url: string | null }> {
   // Try a Files & Media property first.
   const files = props[key]?.files;
   if (Array.isArray(files) && files.length > 0) {
     const file = files[0];
-    if (file.type === "external") return file.external?.url || null;
+    if (file.type === "external") return { file: null, url: file.external?.url || null };
     if (file.type === "file") {
       const url = file.file?.url;
-      const name = file.name || "image";
-      if (!url) return null;
-      const filename = `${prefix}-${sanitizeFilename(name)}`;
+      if (!url) return { file: null, url: null };
+      const filename = `${prefix}-${sanitizeFilename(file.name || "image")}`;
       const local = await downloadImage(url, filename, imagesDir, logger);
-      return local || url;
+      return { file: local, url };
     }
   }
 
   // Fall back to a URL property (e.g. "Thumbnail Image" as URL).
   const urlProp = props[key]?.url;
-  if (urlProp) return urlProp;
+  if (urlProp) return { file: null, url: urlProp };
 
-  return null;
+  return { file: null, url: null };
 }
 
 async function resolvePageIcon(
@@ -149,15 +167,15 @@ async function resolvePageIcon(
   prefix: string,
   imagesDir: string,
   logger: any
-): Promise<string | null> {
-  if (page.icon?.type === "external") return page.icon.external?.url || null;
+): Promise<{ file: string | null; url: string | null }> {
+  if (page.icon?.type === "external") return { file: null, url: page.icon.external?.url || null };
   if (page.icon?.type === "file") {
     const url = page.icon.file?.url;
-    if (!url) return null;
+    if (!url) return { file: null, url: null };
     const local = await downloadImage(url, `${prefix}-icon`, imagesDir, logger);
-    return local || url;
+    return { file: local, url };
   }
-  return null;
+  return { file: null, url: null };
 }
 
 function slugify(text: string) {
@@ -223,9 +241,10 @@ export function notionBioregionLoader(): Loader {
   return {
     name: "notion-bioregions",
     load: async ({ store, logger }) => {
-      const __dirname = dirname(fileURLToPath(import.meta.url));
-      const projectRoot = dirname(__dirname);
-      const imagesDir = join(projectRoot, "public", "images");
+      // Download Notion files into src/assets/notion-images/, resolved at build
+      // time via import.meta.glob in src/lib/images.ts. NOT public/ — files
+      // written there mid-build are not reliably copied to dist/.
+      const imagesDir = fileURLToPath(new URL("../../src/assets/notion-images/", import.meta.url));
       mkdirSync(imagesDir, { recursive: true });
 
       const token = import.meta.env.NOTION_TOKEN || process.env.NOTION_TOKEN;
@@ -295,6 +314,7 @@ export function notionBioregionLoader(): Loader {
               .map((id) => shiftSlugById.get(id))
               .filter(Boolean) as string[];
             const slug = getRichText(i.properties, "URL slug") || slugify(getTitle(i.properties));
+            const image = await resolveImage(i.properties, "Files & Media", slug, imagesDir, logger);
             return {
               slug,
               name: getTitle(i.properties),
@@ -302,7 +322,8 @@ export function notionBioregionLoader(): Loader {
               tags,
               depth: getCheckbox(i.properties, "Case Study") ? "story" : "core",
               notionUrl: getUrl(i.properties, "Website") || getUrl(i.properties, "Learn More") || null,
-              imageUrl: await resolveImageUrl(i.properties, "Files & Media", slug, imagesDir, logger),
+              imageUrl: image.url,
+              imageFile: image.file,
             };
           })
         );
@@ -310,6 +331,10 @@ export function notionBioregionLoader(): Loader {
         // Only keep critical shifts that have at least one published SIS linked.
         const linkedShiftSlugs = new Set(bioInnovations.flatMap((i) => i.tags));
         const activeShifts = bioShifts.filter((s) => linkedShiftSlugs.has(s.slug));
+
+        const thumb = await resolveImage(bio.properties, "Thumbnail Image", bioSlug, imagesDir, logger);
+        const icon =
+          thumb.file || thumb.url ? { file: null, url: null } : await resolvePageIcon(bio, bioSlug, imagesDir, logger);
 
         const entry: BioregionEntry = {
           id: bioId,
@@ -319,10 +344,8 @@ export function notionBioregionLoader(): Loader {
           location: getRichText(bio.properties, "Location"),
           intro: getRichText(bio.properties, "Bioregion Description"),
           shortNarrative: getRichText(bio.properties, "short weaving narrative") || getRichText(bio.properties, "Bioregion Description"),
-          imageUrl:
-            (await resolveImageUrl(bio.properties, "Thumbnail Image", bioSlug, imagesDir, logger)) ||
-            (await resolvePageIcon(bio, bioSlug, imagesDir, logger)) ||
-            null,
+          imageUrl: thumb.url || icon.url || null,
+          imageFile: thumb.file || icon.file || null,
           notionUrl: bio.url,
           active: true,
           criticalShifts: activeShifts,

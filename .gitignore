@@ -10,6 +10,9 @@ dist/
 .env.local
 .env.production
 
+# build-time Notion image downloads (regenerated on every build)
+src/assets/notion-images/
+
 # logs
 npm-debug.log*
 yarn-debug.log*
