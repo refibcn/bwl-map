@@ -30,6 +30,7 @@ interface Props {
   bioregionDescription: string;
   bioregionImageUrl?: string | null;
   bioregionImageFile?: string | null;
+  bioregionCountry?: string | null;
 }
 
 const {
@@ -39,6 +40,7 @@ const {
   bioregionDescription,
   bioregionImageUrl = null,
   bioregionImageFile = null,
+  bioregionCountry = "",
 } = Astro.props as Props;
 
 const base = import.meta.env.BASE_URL || "";
@@ -88,8 +90,6 @@ const csNameLineHeight = 14;
 const csLeverageLineHeight = 12;
 const sisNameLineHeight = 14;
 const sisDescLineHeight = 12;
-const bioNameLineHeight = 18;
-const bioDescLineHeight = 12;
 
 function wrapLines(text: string, maxChars: number) {
   const words = text.split(" ");
@@ -107,28 +107,36 @@ function wrapLines(text: string, maxChars: number) {
   return lines;
 }
 
-// --- Bioregion card text: width-based wrapping (generic format controller) ---
+// --- Bioregion card: image strip on top, title + country + description below ---
 const BIO_TEXT_INSET = 20;
+const BIO_TEXT_PAD = 14; // vertical padding of the text section inside the card
 const bioTextWidth = bioW - BIO_TEXT_INSET * 2;
 const bioTextX = bioX - bioW / 2 + BIO_TEXT_INSET;
-const bioNameFont = 15;
+const bioImageH = 110; // full-width image strip on top (≈ same height as the text section)
+const bioNameFont = 18; // bigger title
+const bioCountryFont = 10;
 const bioDescFont = 9;
+const bioImageSrc = resolveImageSource(bioregionImageFile, bioregionImageUrl);
+
 const bioNameLines = wrapToWidth(bioregionName || "", bioTextWidth, bioNameFont, "display");
+const bioCountryLines = wrapToWidth(bioregionCountry || "", bioTextWidth, bioCountryFont, "display");
 const bioDescLines = wrapToWidth(bioregionDescription || "", bioTextWidth, bioDescFont, "body");
 if (bioNameLines.length > 2 || bioDescLines.length > 6) {
   console.warn(
     `[bwl-map] "${bioregionName}": title wraps to ${bioNameLines.length} line(s), description to ${bioDescLines.length} (max recommended: 2 / 6)`
   );
 }
+
+const bioNameLineHeight = 21; // 18px display font
+const bioCountryLineHeight = 12;
+const bioDescLineHeight = 12;
+const bioCountryGap = bioCountryLines.length ? 5 : 0;
 const bioDescGap = bioDescLines.length ? 8 : 0;
 const bioTextHeight =
-  bioNameLines.length * bioNameLineHeight + bioDescGap + bioDescLines.length * bioDescLineHeight;
-const bioH = Math.max(120, bioTextHeight + 40);
-
-const bioImageW = 140;
-const bioImageH = 90;
-const bioImageGap = 14;
-const bioBlockHeight = bioImageH + bioImageGap + bioH;
+  bioNameLines.length * bioNameLineHeight +
+  bioCountryGap + bioCountryLines.length * bioCountryLineHeight +
+  bioDescGap + bioDescLines.length * bioDescLineHeight;
+const bioH = bioImageH + bioTextHeight + BIO_TEXT_PAD * 2;
 
 const csGap = 16;
 const sisGap = 16;
@@ -142,24 +150,62 @@ const csCards = shifts.map((s, i) => {
   return { ...s, nameLines, leverageLines, cardHeight, color: PALETTE[i % PALETTE.length] };
 });
 
+const SIS_TEXT_GAP = 18; // space between the image square and the text
+const SIS_TEXT_RIGHT = 12; // space between the text and the card's right border
+const SIS_MIN_IMAGE = 96; // minimum square image side
+
 const sisCards = innovations.map((inv) => {
-  const nameLines = wrapLines(inv.name || "", 26);
-  const descLines = wrapLines(inv.description || "", 38);
-  const textHeight = nameLines.length * sisNameLineHeight + 4 + descLines.length * sisDescLineHeight;
-  const cardHeight = Math.max(84, textHeight + 28);
-  return { ...inv, nameLines, descLines, cardHeight };
+  const hasImage = !!resolveImageSource(inv.imageFile, inv.imageUrl);
+  if (!hasImage) {
+    const textX = sisX + 16;
+    const textWidth = sisW - 16 - SIS_TEXT_RIGHT;
+    const nameLines = wrapToWidth(inv.name || "", textWidth, 12, "display");
+    const descLines = wrapToWidth(inv.description || "", textWidth, 9.5, "body");
+    const textHeight = nameLines.length * sisNameLineHeight + 4 + descLines.length * sisDescLineHeight;
+    return { ...inv, hasImage: false, nameLines, descLines, textHeight, textX, imgSide: 0, cardHeight: Math.max(84, textHeight + 28) };
+  }
+  // The image is a square occupying the full left section: its side equals the
+  // card height, so wrap the text iteratively until the layout stabilizes.
+  let imgSide = SIS_MIN_IMAGE;
+  let nameLines: string[] = [];
+  let descLines: string[] = [];
+  let textHeight = 0;
+  let cardHeight = SIS_MIN_IMAGE;
+  for (let i = 0; i < 4; i++) {
+    const textX = sisX + imgSide + SIS_TEXT_GAP;
+    const textWidth = sisW - imgSide - SIS_TEXT_GAP - SIS_TEXT_RIGHT;
+    nameLines = wrapToWidth(inv.name || "", textWidth, 12, "display");
+    descLines = wrapToWidth(inv.description || "", textWidth, 9.5, "body");
+    textHeight = nameLines.length * sisNameLineHeight + 4 + descLines.length * sisDescLineHeight;
+    cardHeight = Math.max(SIS_MIN_IMAGE, textHeight + 28);
+    if (cardHeight <= imgSide) break;
+    imgSide = cardHeight;
+  }
+  return {
+    ...inv,
+    hasImage: true,
+    nameLines,
+    descLines,
+    textHeight,
+    textX: sisX + imgSide + SIS_TEXT_GAP,
+    imgSide,
+    cardHeight,
+  };
 });
 
 const csHeight = csCards.reduce((sum, c, i) => sum + c.cardHeight + (i < csCards.length - 1 ? csGap : 0), 0);
 const sisHeight = sisCards.reduce((sum, c, i) => sum + c.cardHeight + (i < sisCards.length - 1 ? sisGap : 0), 0);
 const contentHeight = Math.max(csHeight, sisHeight);
-const height = contentHeight + margin.top + margin.bottom + bioImageGap + 28;
+const height = contentHeight + margin.top + margin.bottom + 28;
 
 const bioY = height / 2;
-const bioImageY = bioY - bioBlockHeight / 2;
-const bioBoxY = bioImageY + bioImageH + bioImageGap + bioH / 2;
-const bioNameStartY = bioBoxY - bioTextHeight / 2 + bioNameLineHeight * 0.75;
-const bioDescStartY = bioNameStartY + bioNameLines.length * bioNameLineHeight + bioDescGap;
+const bioTop = bioY - bioH / 2; // top of the card (and of the image strip)
+const bioBoxY = bioY; // card vertical center (connector target)
+// Text block, vertically centered in the section below the image strip.
+const bioTextTop = bioTop + bioImageH + (bioH - bioImageH - bioTextHeight) / 2;
+const bioNameStartY = bioTextTop + bioNameLineHeight * 0.8;
+const bioCountryStartY = bioNameStartY + bioNameLines.length * bioNameLineHeight + bioCountryGap;
+const bioDescStartY = bioCountryStartY + bioCountryLines.length * bioCountryLineHeight + bioDescGap;
 
 function stackPositions(cards: { cardHeight: number }[], startY: number, gap: number) {
   const positions: number[] = [];
@@ -251,23 +297,10 @@ function curve(x1: number, y1: number, x2: number, y2: number, strength = 0.5) {
       );
     })}
 
-    {/* Bioregion image (above the card) */}
-    {bioregionImageUrl && (
-      <image
-        x={bioX - bioImageW / 2}
-        y={bioImageY}
-        width={bioImageW}
-        height={bioImageH}
-        href={resolveImageSource(bioregionImageFile, bioregionImageUrl)}
-        clip-path="inset(0px round 14px)"
-        preserveAspectRatio="xMidYMid slice"
-      />
-    )}
-
-    {/* Bioregion rounded square */}
+    {/* Bioregion card: image strip on top, text below */}
     <rect
       x={bioX - bioW / 2}
-      y={bioBoxY - bioH / 2}
+      y={bioTop}
       width={bioW}
       height={bioH}
       rx="18"
@@ -276,16 +309,27 @@ function curve(x1: number, y1: number, x2: number, y2: number, strength = 0.5) {
       stroke-width="2"
       filter="url(#softShadow)"
     />
+    {bioImageSrc && (
+      <image
+        x={bioX - bioW / 2}
+        y={bioTop}
+        width={bioW}
+        height={bioImageH}
+        href={bioImageSrc}
+        clip-path="inset(0px round 18px 18px 0 0)"
+        preserveAspectRatio="xMidYMid slice"
+      />
+    )}
+    {/* Redraw the card border over the image edge */}
     <rect
-      x={bioX - bioW / 2 + 5}
-      y={bioBoxY - bioH / 2 + 5}
-      width={bioW - 10}
-      height={bioH - 10}
-      rx="14"
+      x={bioX - bioW / 2}
+      y={bioTop}
+      width={bioW}
+      height={bioH}
+      rx="18"
       fill="none"
-      stroke="var(--bwl-secondary)"
-      stroke-width="1"
-      opacity="0.35"
+      stroke="var(--bwl-primary)"
+      stroke-width="2"
     />
 
     <SVGTextBlock
@@ -296,6 +340,16 @@ function curve(x1: number, y1: number, x2: number, y2: number, strength = 0.5) {
       anchor="start"
       style={`font-family:var(--font-display);font-size:${bioNameFont}px;font-weight:bold;fill:var(--bwl-primary);`}
     />
+    {bioCountryLines.length > 0 && (
+      <SVGTextBlock
+        lines={bioCountryLines}
+        x={bioTextX}
+        y={bioCountryStartY}
+        lineHeight="1.2em"
+        anchor="start"
+        style={`font-family:var(--font-display);font-size:${bioCountryFont}px;font-weight:bold;fill:var(--bwl-secondary);letter-spacing:0.1em;text-transform:uppercase;`}
+      />
+    )}
     <SVGTextBlock
       lines={bioDescLines}
       x={bioTextX}
@@ -317,23 +371,22 @@ function curve(x1: number, y1: number, x2: number, y2: number, strength = 0.5) {
             y={s.y - s.cardHeight / 2}
             width={csW}
             height={s.cardHeight}
-            rx={s.cardHeight / 2}
+            rx="12"
             fill="var(--paper-raised)"
             stroke={s.color}
             stroke-width="2"
             filter="url(#softShadow)"
           />
-          <circle cx={csX + 24} cy={s.y} r="4" fill={s.color} />
           <SVGTextBlock
             lines={s.nameLines}
-            x={csX + 42}
+            x={csX + 24}
             y={nameY}
             lineHeight="1.2em"
             style="font-family:var(--font-display);font-size:12px;font-weight:bold;fill:var(--bwl-primary);"
           />
           <SVGTextBlock
             lines={s.leverageLines}
-            x={csX + 42}
+            x={csX + 24}
             y={leverageY}
             lineHeight="1.3em"
             style="font-family:var(--font-body);font-size:9.5px;fill:var(--bwl-text);opacity:0.85;"
@@ -345,10 +398,10 @@ function curve(x1: number, y1: number, x2: number, y2: number, strength = 0.5) {
     {/* Systemic Innovations */}
     {innovPositions.map((inv) => {
       const untagged = inv.tags.length === 0;
-      const textHeight = inv.nameLines.length * sisNameLineHeight + 4 + inv.descLines.length * sisDescLineHeight;
-      const nameY = inv.y - textHeight / 2 + sisNameLineHeight * 0.8;
+      const sisImageSrc = resolveImageSource(inv.imageFile, inv.imageUrl);
+      const nameY = inv.y - inv.textHeight / 2 + sisNameLineHeight * 0.8;
       const descY = nameY + inv.nameLines.length * sisNameLineHeight + 4;
-      const textX = sisX + 66;
+      const imgY = inv.y - inv.cardHeight / 2;
       return (
         <g
           class={`card sis-card sis-${inv.slug}`}
@@ -358,7 +411,7 @@ function curve(x1: number, y1: number, x2: number, y2: number, strength = 0.5) {
         >
           <rect
             x={sisX}
-            y={inv.y - inv.cardHeight / 2}
+            y={imgY}
             width={sisW}
             height={inv.cardHeight}
             rx="10"
@@ -368,27 +421,40 @@ function curve(x1: number, y1: number, x2: number, y2: number, strength = 0.5) {
             stroke-dasharray={untagged ? "4,3" : "none"}
             filter="url(#softShadow)"
           />
-          {inv.imageUrl && (
+          {sisImageSrc && (
             <image
-              x={sisX + 10}
-              y={inv.y - 25}
-              width="50"
-              height="50"
-              href={resolveImageSource(inv.imageFile, inv.imageUrl)}
-              clip-path="inset(0px round 8px)"
+              x={sisX}
+              y={imgY}
+              width={inv.imgSide}
+              height={inv.imgSide}
+              href={sisImageSrc}
+              clip-path="inset(0px round 10px 0 0 10px)"
               preserveAspectRatio="xMidYMid slice"
+            />
+          )}
+          {sisImageSrc && (
+            <rect
+              x={sisX}
+              y={imgY}
+              width={sisW}
+              height={inv.cardHeight}
+              rx="10"
+              fill="none"
+              stroke={untagged ? "var(--bwl-muted)" : "var(--line-strong)"}
+              stroke-width="1.5"
+              stroke-dasharray={untagged ? "4,3" : "none"}
             />
           )}
           <SVGTextBlock
             lines={inv.nameLines}
-            x={textX}
+            x={inv.textX}
             y={nameY}
             lineHeight="1.15em"
             style="font-family:var(--font-display);font-size:12px;font-weight:bold;fill:var(--bwl-primary);"
           />
           <SVGTextBlock
             lines={inv.descLines}
-            x={textX}
+            x={inv.textX}
             y={descY}
             lineHeight="1.3em"
             style="font-family:var(--font-body);font-size:9.5px;fill:var(--bwl-text);opacity:0.85;"

@@ -10,6 +10,7 @@ const DATA_SOURCES = {
 };
 
 export interface CriticalShift {
+  id: string;
   slug: string;
   name: string;
   emoji: string | null;
@@ -310,6 +311,7 @@ export function notionBioregionLoader(): Loader {
             const name = tagName || deriveShiftName(shiftText);
             const slug = tagName ? slugify(tagName) : slugify(name);
             return {
+              id: s.id,
               slug,
               name,
               emoji: getEmoji(s),
@@ -319,10 +321,10 @@ export function notionBioregionLoader(): Loader {
             };
           });
 
-        const shiftSlugById = new Map(bioShifts.map((s, i) => {
-          const id = relatedShiftIds[i];
-          return id ? [id, s.slug] : ["", ""];
-        }).filter(([id]) => id));
+        // Map by the shift's own id — NOT by array index: bioShifts follows the
+        // criticalShifts source order, which can differ from the relation order,
+        // and a mismatched pairing would connect SIS cards to the wrong shifts.
+        const shiftSlugById = new Map(bioShifts.map((s) => [s.id, s.slug]));
 
         const bioInnovationsRaw = systemicInnovations
           .filter((i) => getRelationIds(i.properties, "Bioregion").includes(bioId))
