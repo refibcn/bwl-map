@@ -1,0 +1,17 @@
+---
+import { getCollection } from "astro:content";
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import EuropeMap from "../../components/EuropeMap.astro";
+import SiteNav from "../../components/SiteNav.astro";
+import { buildMapRegions } from "../../lib/map-regions";
+
+const all = await getCollection("bioregions");
+const regions = buildMapRegions(all.map((b) => b.data));
+---
+
+<BaseLayout title="Europe map — BWL">
+  <SiteNav current="europe" />
+  <main>
+    <EuropeMap regions={regions} variant="geographic" />
+  </main>
+</BaseLayout>

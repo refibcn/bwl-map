@@ -1,0 +1,29 @@
+---
+import { getCollection } from "astro:content";
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import SiteNav from "../../components/SiteNav.astro";
+
+const all = await getCollection("bioregions");
+const bioregions = all
+  .map((b) => b.data)
+  .sort((a, b) => a.name.localeCompare(b.name));
+---
+
+<BaseLayout title="List view — BWL Map">
+  <SiteNav current="list" />
+  <div class="wrap" style="padding-top:4rem;padding-bottom:5rem">
+    <p class="eyebrow">Bioregional Weaving Labs</p>
+    <h1 style="font-size:34px;margin:0.5rem 0 0.25rem">Portfolio</h1>
+    <p style="margin-bottom:2rem;color:var(--mist)">
+      List view of the bioregions — <a href={import.meta.env.BASE_URL}>see them on the map</a>.
+    </p>
+    <div style="display:grid;gap:10px">
+      {bioregions.map((b) => (
+        <a class="landing-row" href={`../bioregions/${b.slug}/`}>
+          <span class="name">{b.name}</span>
+          <span class="badge-soft">{b.country}</span>
+        </a>
+      ))}
+    </div>
+  </div>
+</BaseLayout>

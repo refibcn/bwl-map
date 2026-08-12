@@ -1,0 +1,428 @@
+---
+/**
+ * Europe map landing — BWL style, inspired by the w1 map hero:
+ * a single stylised map with clickable region markers, pulse rings,
+ * label pills and ringed-photo hover cards.
+ *
+ * Two variants:
+ *   - "stylized":    merged landmass (no country borders), soft drop shadow,
+ *                    deep-teal decorative sea bottom-left — the w1 imitation.
+ *   - "geographic":  real country shapes with subtle borders on flat ocean.
+ *
+ * Markers are positioned by the same linear projection used to generate the
+ * land geometry (src/lib/map-projection.ts), so they sit on the actual spots.
+ */
+import europeMap from "../data/europe-map.json";
+import { notionImageUrl } from "../lib/images";
+
+export interface MapRegion {
+  slug: string;
+  name: string;
+  country: string;
+  desc: string;
+  imageFile: string | null;
+  imageUrl: string | null;
+  x: number; // percent of stage
+  y: number;
+  ring: string;
+}
+
+interface Props {
+  regions: MapRegion[];
+  variant: "stylized" | "geographic";
+}
+
+const { regions, variant } = Astro.props;
+const base = import.meta.env.BASE_URL.endsWith("/") ? import.meta.env.BASE_URL : import.meta.env.BASE_URL + "/";
+const viewBox = `${europeMap.width} ${europeMap.height}`;
+const W = europeMap.width;
+const H = europeMap.height;
+// Deduplicate path strings: several countries share land paths in the 50m
+// set (e.g. San Marino is a hole in Italy) — a Set shrinks the SVG.
+const paths = [...new Set(europeMap.countries.flatMap((c) => c.d))];
+---
+
+<div class="bwc-hero" id="bwcHero" data-variant={variant}>
+  <div class="bwc-stage" style={`aspect-ratio:${W}/${H}`}>
+    <svg
+      class="bwc-map"
+      viewBox={`0 0 ${W} ${H}`}
+      role="img"
+      aria-label="Map of Europe with bioregion markers"
+      preserveAspectRatio="xMidYMid meet"
+    >
+      <defs>
+        <filter id="bwc-shadow" x="-10%" y="-10%" width="130%" height="140%">
+          <feDropShadow dx="0" dy="10" stdDeviation="14" flood-color="#20404f" flood-opacity="0.28" />
+        </filter>
+      </defs>
+      <g class="land" {...(variant === "stylized" ? { filter: "url(#bwc-shadow)" } : {})}>
+        {paths.map((d) => <path d={d} />)}
+      </g>
+    </svg>
+
+    {variant === "stylized" && <div class="bwc-deepsea" aria-hidden="true"></div>}
+
+    <div class="bwc-markers">
+      {regions.map((r, i) => {
+        const img = notionImageUrl(r.imageFile) ?? r.imageUrl ?? undefined;
+        return (
+          <a
+            class="bwc-marker"
+            href={`${base}bioregions/${r.slug}/`}
+            style={`--x:${r.x.toFixed(3)}%;--y:${r.y.toFixed(3)}%;--i:${i};--ring:${r.ring}`}
+            aria-label={r.name}
+          >
+            <span class="bwc-pulse"></span>
+            <span class="bwc-hit"></span>
+            <span class="bwc-label">{r.name}</span>
+            <span class="bwc-card">
+              <span class="bwc-ring">{img && <img src={img} alt="" loading="lazy" />}</span>
+              <span class="bwc-card-title">{r.name}</span>
+              <span class="bwc-card-desc">{r.desc}</span>
+            </span>
+          </a>
+        );
+      })}
+    </div>
+
+    <div class="bwc-headline">
+      <h1 class="bwc-title">
+        <span class="bwc-line">Weaving Communities of Action,</span>
+        <span class="bwc-line">Rooted in Place</span>
+      </h1>
+      <div class="bwc-subtitle">Explore a bioregion by clicking on the map</div>
+    </div>
+  </div>
+</div>
+
+<script>
+  const hero = document.getElementById("bwcHero");
+  function play() {
+    hero?.classList.add("is-loaded");
+  }
+  if (document.readyState === "complete") requestAnimationFrame(play);
+  else window.addEventListener("load", () => requestAnimationFrame(play));
+</script>
+
+<style>
+  /* ================================================================
+     Palette (w1-derived) — kept local to the hero.
+     ================================================================ */
+  .bwc-hero {
+    --bwc-ocean: #8da5af;      /* light blue-grey sea            */
+    --bwc-deep: #2a6a7c;       /* deep-teal decorative sea       */
+    --bwc-land: #e9e6d5;       /* warm cream land                */
+    --bwc-title: #20404f;      /* headline colour                */
+    --bwc-subtitle: #0a1419;
+    --bwc-card-bg: #f9f9f3;
+    --bwc-card-text: #20404f;
+    --bwc-card-desc: #e2ad4f;
+    --bwc-label-text: #fffff0;
+    --bwc-shadow: rgba(20, 40, 30, 0.28);
+    --bwc-font-head: "Sentinel Bold", Georgia, "Times New Roman", serif;
+    --bwc-font-body: "Lato", Helvetica, Arial, sans-serif;
+    --bwc-container: 1400px;
+  }
+
+  .bwc-hero * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  .bwc-hero {
+    position: relative;
+    width: 100%;
+    overflow: hidden;
+    font-family: var(--bwc-font-body);
+    background: var(--bwc-ocean);
+  }
+
+  .bwc-stage {
+    position: relative;
+    width: 100%;
+    max-width: var(--bwc-container);
+    margin: 0 auto;
+  }
+
+  .bwc-map {
+    display: block;
+    width: 100%;
+    height: auto;
+    opacity: 0;
+    transform: scale(1.05);
+  }
+
+  /* -------- land styling per variant -------- */
+  .bwc-hero[data-variant="stylized"] .land path {
+    fill: var(--bwc-land);
+  }
+  .bwc-hero[data-variant="geographic"] .land path {
+    fill: var(--bwc-land);
+    stroke: rgba(32, 64, 79, 0.4);
+    stroke-width: 1;
+    stroke-linejoin: round;
+  }
+
+  /* deep-teal decorative sea, bottom-left (stylized only) */
+  .bwc-deepsea {
+    position: absolute;
+    left: -18%;
+    bottom: -34%;
+    width: 58%;
+    aspect-ratio: 1/1;
+    border-radius: 50%;
+    background: radial-gradient(circle at 35% 35%, #3b7487, var(--bwc-deep) 70%);
+    opacity: 0.95;
+    pointer-events: none;
+  }
+
+  /* -------- markers -------- */
+  .bwc-markers { position: absolute; inset: 0; }
+
+  .bwc-marker {
+    position: absolute;
+    left: var(--x);
+    top: var(--y);
+    width: var(--hit, 4.2%);
+    aspect-ratio: 1/1;
+    transform: translate(-50%, -50%);
+    display: block;
+    text-decoration: none;
+    cursor: pointer;
+    opacity: 0;
+    z-index: 3;
+  }
+  .bwc-marker:hover,
+  .bwc-marker:focus-within { z-index: 60; }
+
+  .bwc-hit {
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    border: 2px solid var(--ring, #c9762b);
+    background: radial-gradient(
+      circle,
+      color-mix(in srgb, var(--ring, #c9762b) 22%, transparent),
+      transparent 70%
+    );
+    opacity: 0;
+    transition: opacity 0.3s ease, transform 0.35s cubic-bezier(0.2, 0.9, 0.3, 1.3);
+    transform: scale(0.7);
+  }
+  .bwc-marker:hover .bwc-hit,
+  .bwc-marker:focus-visible .bwc-hit {
+    opacity: 1;
+    transform: scale(1.15);
+  }
+
+  .bwc-hero.is-loaded .bwc-marker .bwc-pulse {
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    border: 2px solid var(--ring, #c9762b);
+    animation: bwc-pulse 2.6s ease-out infinite;
+    animation-delay: calc(2s + var(--i) * 0.2s);
+  }
+  @keyframes bwc-pulse {
+    0% { transform: scale(0.7); opacity: 0.55; }
+    70% { transform: scale(1.5); opacity: 0; }
+    100% { opacity: 0; }
+  }
+  .bwc-marker:hover .bwc-pulse,
+  .bwc-marker:focus-visible .bwc-pulse { animation-play-state: paused; opacity: 0; }
+
+  /* name label pill under each marker */
+  .bwc-label {
+    position: absolute;
+    top: calc(100% + 3px);
+    left: 50%;
+    transform: translateX(-50%);
+    font-family: var(--bwc-font-body);
+    font-size: clamp(8px, 0.62vw, 11px);
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    line-height: 1.15;
+    text-align: center;
+    text-transform: uppercase;
+    white-space: nowrap;
+    color: var(--bwc-label-text);
+    background: var(--ring, #c9762b);
+    padding: 4px 7px;
+    border-radius: 5px;
+    box-shadow: 0 3px 8px var(--bwc-shadow);
+    pointer-events: none;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+  }
+  .bwc-marker:hover .bwc-label,
+  .bwc-marker:focus-visible .bwc-label {
+    box-shadow: 0 6px 14px var(--bwc-shadow);
+    transform: translateX(-50%) translateY(1px);
+  }
+
+  /* -------- hover card -------- */
+  .bwc-card {
+    position: absolute;
+    bottom: calc(100% + 12px);
+    left: 50%;
+    transform: translate(-50%, 8px) scale(0.92);
+    width: 210px;
+    background: var(--bwc-card-bg);
+    border-radius: 14px;
+    padding: 18px 16px 16px;
+    text-align: center;
+    box-shadow: 0 18px 40px var(--bwc-shadow);
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition: opacity 0.3s ease, transform 0.35s cubic-bezier(0.2, 0.9, 0.3, 1.2), visibility 0.3s;
+    z-index: 5;
+  }
+  .bwc-card::after {
+    content: "";
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    border: 9px solid transparent;
+    border-top-color: var(--bwc-card-bg);
+  }
+  .bwc-marker:hover .bwc-card,
+  .bwc-marker:focus-visible .bwc-card {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+    transform: translate(-50%, 0) scale(1);
+  }
+
+  .bwc-ring {
+    position: relative;
+    width: 108px;
+    height: 108px;
+    margin: 0 auto 12px;
+    border-radius: 50%;
+    display: block;
+  }
+  .bwc-ring img {
+    position: relative;
+    z-index: 2;
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    object-fit: cover;
+    display: block;
+    box-shadow:
+      0 0 0 4px var(--bwc-card-bg),
+      0 0 0 7px var(--ring, #c9762b),
+      0 0 0 12px var(--bwc-card-bg),
+      0 0 0 14px color-mix(in srgb, var(--ring, #c9762b) 45%, transparent);
+  }
+  .bwc-ring::before {
+    content: "";
+    position: absolute;
+    inset: -6px;
+    border-radius: 50%;
+    border: 2px solid var(--ring, #c9762b);
+    opacity: 0;
+  }
+  .bwc-marker:hover .bwc-ring::before,
+  .bwc-marker:focus-visible .bwc-ring::before {
+    animation: bwc-ripple 1.6s ease-out infinite;
+  }
+  @keyframes bwc-ripple {
+    0% { transform: scale(1); opacity: 0.6; }
+    100% { transform: scale(1.45); opacity: 0; }
+  }
+  .bwc-card-title {
+    font-family: var(--bwc-font-head);
+    font-weight: normal;
+    font-size: 14px;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+    color: var(--bwc-card-text);
+    margin-bottom: 6px;
+    display: block;
+  }
+  .bwc-card-desc {
+    font-family: var(--bwc-font-body);
+    font-size: 12.5px;
+    line-height: 1.5;
+    color: var(--bwc-card-desc);
+    display: block;
+  }
+
+  /* -------- headline -------- */
+  .bwc-headline {
+    position: absolute;
+    top: 7%;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 100%;
+    padding: 0 20px;
+    text-align: center;
+    z-index: 4;
+    pointer-events: none;
+  }
+  .bwc-title {
+    font-family: var(--bwc-font-head);
+    font-weight: normal;
+    color: var(--bwc-title);
+    font-size: 60px;
+    line-height: 1.08;
+    letter-spacing: 0.005em;
+  }
+  .bwc-title .bwc-line { display: block; opacity: 0; transform: translateY(28px); }
+  .bwc-subtitle {
+    margin-top: 18px;
+    display: inline-block;
+    font-family: var(--bwc-font-body);
+    font-size: clamp(13px, 1vw, 15px);
+    font-weight: 700;
+    line-height: 1.4;
+    color: var(--bwc-subtitle);
+    background: rgba(255, 255, 255, 0.35);
+    padding: 8px 12px;
+    border-radius: 6px;
+    opacity: 0;
+    transform: translateY(16px);
+  }
+
+  /* -------- entrance animations -------- */
+  .bwc-hero.is-loaded .bwc-map {
+    animation: bwc-map-in 1.5s cubic-bezier(0.2, 0.7, 0.2, 1) forwards;
+  }
+  .bwc-hero.is-loaded .bwc-title .bwc-line {
+    animation: bwc-rise 0.9s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+  }
+  .bwc-hero.is-loaded .bwc-title .bwc-line:nth-child(1) { animation-delay: 0.5s; }
+  .bwc-hero.is-loaded .bwc-title .bwc-line:nth-child(2) { animation-delay: 0.68s; }
+  .bwc-hero.is-loaded .bwc-subtitle {
+    animation: bwc-rise 0.9s 1s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+  }
+  .bwc-hero.is-loaded .bwc-marker {
+    animation: bwc-pop 0.7s cubic-bezier(0.2, 0.9, 0.3, 1.5) forwards;
+    animation-delay: calc(1s + var(--i) * 0.14s);
+  }
+  @keyframes bwc-map-in { to { opacity: 1; transform: scale(1); } }
+  @keyframes bwc-rise { to { opacity: 1; transform: translateY(0); } }
+  @keyframes bwc-pop {
+    0% { opacity: 0; transform: translate(-50%, -50%) scale(0.3); }
+    70% { opacity: 1; transform: translate(-50%, -50%) scale(1.12); }
+    100% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .bwc-hero * { animation: none !important; }
+    .bwc-map, .bwc-marker, .bwc-title .bwc-line, .bwc-subtitle { opacity: 1 !important; }
+    .bwc-map { transform: none !important; }
+    .bwc-marker { transform: translate(-50%, -50%) !important; }
+  }
+
+  /* -------- responsive -------- */
+  @media (max-width: 900px) {
+    .bwc-headline { top: 4%; }
+    .bwc-title { font-size: 34px; }
+    .bwc-card { width: 168px; }
+    .bwc-marker { width: var(--hit-m, 6%); }
+  }
+  @media (max-width: 520px) {
+    .bwc-title { font-size: 26px; }
+  }
+</style>

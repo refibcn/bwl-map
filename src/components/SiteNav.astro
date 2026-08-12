@@ -1,0 +1,52 @@
+---
+interface Props {
+  current: "map" | "europe" | "list";
+}
+const { current } = Astro.props;
+const base = import.meta.env.BASE_URL.endsWith("/") ? import.meta.env.BASE_URL : import.meta.env.BASE_URL + "/";
+const links = [
+  { id: "map", label: "Map", href: `${base}` },
+  { id: "europe", label: "Europe", href: `${base}map/` },
+  { id: "list", label: "List view", href: `${base}list/` },
+] as const;
+---
+
+<nav class="site-nav" aria-label="Views">
+  {links.map((l) => (
+    <a class={l.id === current ? "active" : ""} href={l.href}>{l.label}</a>
+  ))}
+</nav>
+
+<style>
+  .site-nav {
+    position: fixed;
+    top: 14px;
+    right: 16px;
+    z-index: 100;
+    display: flex;
+    gap: 4px;
+    padding: 4px;
+    border-radius: 999px;
+    background: rgba(249, 249, 243, 0.92);
+    border: 1px solid rgba(32, 64, 79, 0.18);
+    box-shadow: 0 4px 14px rgba(32, 64, 79, 0.14);
+    backdrop-filter: blur(6px);
+    font-family: var(--font-body);
+  }
+  .site-nav a {
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    text-decoration: none;
+    color: var(--ink-strong);
+    padding: 6px 12px;
+    border-radius: 999px;
+    transition: background 0.15s ease, color 0.15s ease;
+  }
+  .site-nav a:hover { background: rgba(32, 64, 79, 0.08); }
+  .site-nav a.active {
+    background: var(--bwl-primary);
+    color: #fff;
+  }
+</style>

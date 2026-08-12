@@ -11,5 +11,9 @@
     "@notionhq/client": "^5.23.3",
     "astro": "^5.0.0",
     "dotenv": "^17.4.2"
+  },
+  "devDependencies": {
+    "topojson-client": "^3.1.0",
+    "world-atlas": "^2.0.2"
   }
 }

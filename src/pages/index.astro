@@ -1,24 +1,17 @@
 ---
 import { getCollection } from "astro:content";
 import BaseLayout from "../layouts/BaseLayout.astro";
+import EuropeMap from "../components/EuropeMap.astro";
+import SiteNav from "../components/SiteNav.astro";
+import { buildMapRegions } from "../lib/map-regions";
 
 const all = await getCollection("bioregions");
-const bioregions = all
-  .map((b) => b.data)
-  .sort((a, b) => a.name.localeCompare(b.name));
+const regions = buildMapRegions(all.map((b) => b.data));
 ---
 
-<BaseLayout title="BWL Map">
-  <div class="wrap" style="padding-top:4rem;padding-bottom:5rem">
-    <p class="eyebrow">Bioregional Weaving Labs</p>
-    <h1 style="font-size:34px;margin:0.5rem 0 2rem">Portfolio map</h1>
-    <div style="display:grid;gap:10px">
-      {bioregions.map((b) => (
-        <a class="landing-row" href={`bioregions/${b.slug}/`}>
-          <span class="name">{b.name}</span>
-          <span class="badge-soft">{b.country}</span>
-        </a>
-      ))}
-    </div>
-  </div>
+<BaseLayout title="BWL Map — Bioregions of Europe">
+  <SiteNav current="map" />
+  <main>
+    <EuropeMap regions={regions} variant="stylized" />
+  </main>
 </BaseLayout>

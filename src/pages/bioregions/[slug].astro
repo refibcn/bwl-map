@@ -19,7 +19,7 @@ const bioDescription = data.shortNarrative || data.intro;
 ---
 
 <BaseLayout title={`${data.name} — BWL portfolio`}>
-  <a class="back-link" href={import.meta.env.BASE_URL} aria-label="Back to all bioregions">← All bioregions</a>
+  <a class="back-link" href={import.meta.env.BASE_URL} aria-label="Back to the map">← Map</a>
   <FlowDiagram
     bioregionName={data.name}
     bioregionDescription={bioDescription}
