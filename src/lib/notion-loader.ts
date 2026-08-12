@@ -297,6 +297,13 @@ export function notionBioregionLoader(): Loader {
           logger.info(`Skipping inactive bioregion: ${getTitle(bio.properties)}`);
           continue;
         }
+        // Only main bioregions get their own page: sub-bioregions (e.g. the
+        // Living Delta members) have a non-empty "Parent item" relation and
+        // will be folded into the main bioregion page later.
+        if (getRelationIds(bio.properties, "Parent item").length > 0) {
+          logger.info(`Skipping sub-bioregion: ${getTitle(bio.properties)}`);
+          continue;
+        }
 
         const bioId = bio.id;
         const bioName = getTitle(bio.properties);

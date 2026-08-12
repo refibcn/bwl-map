@@ -180,7 +180,9 @@ sisCards = sisCards.map((c) => ({ ...c, cardHeight: sisCardHeight }));
 
 const csHeight = csCards.reduce((sum, c, i) => sum + c.cardHeight + (i < csCards.length - 1 ? csGap : 0), 0);
 const sisHeight = sisCards.reduce((sum, c, i) => sum + c.cardHeight + (i < sisCards.length - 1 ? sisGap : 0), 0);
-const contentHeight = Math.max(csHeight, sisHeight);
+// The canvas must always fit the bioregion card, even when a page has no
+// shifts/innovations yet (otherwise the card overflows above the viewBox).
+const contentHeight = Math.max(csHeight, sisHeight, bioH);
 const height = contentHeight + margin.top + margin.bottom + 28;
 
 const bioY = height / 2;
