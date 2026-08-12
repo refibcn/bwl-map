@@ -1,7 +1,7 @@
 ---
 import SVGTextBlock from "./SVGTextBlock.astro";
 import { notionImageUrl } from "../lib/images";
-import { wrapToWidth } from "../lib/text";
+import { wrapToWidth, capLines } from "../lib/text";
 
 interface Shift {
   slug: string;
@@ -73,16 +73,17 @@ const PALETTE = [
   "#D4A84B", // light gold
 ];
 
-const width = 1440; // broader diagram, fits full-screen on typical laptops
+const COLUMN_GAP = 190; // space between the three columns
 const margin = { top: 40, right: 150, bottom: 40, left: 150 };
-const COLUMN_GAP = 150; // space between the three columns
-
 const bioW = 320;
+const csW = 200;
+const sisW = 320;
+// Total canvas width is derived from the parts, so tuning the gap or margins
+// re-flows the whole diagram.
+const width = margin.left + bioW + COLUMN_GAP + csW + COLUMN_GAP + sisW + margin.right;
 const bioX = margin.left + bioW / 2;
 const csX = margin.left + bioW + COLUMN_GAP;
-const csW = 200;
 const sisX = csX + csW + COLUMN_GAP;
-const sisW = 320;
 
 const csTextWidth = csW - 52;
 const sisTextWidth = sisW - 80;
@@ -119,14 +120,16 @@ const bioCountryFont = 10;
 const bioDescFont = 9;
 const bioImageSrc = resolveImageSource(bioregionImageFile, bioregionImageUrl);
 
-const bioNameLines = wrapToWidth(bioregionName || "", bioTextWidth, bioNameFont, "display");
+const bioNameRaw = wrapToWidth(bioregionName || "", bioTextWidth, bioNameFont, "display");
 const bioCountryLines = wrapToWidth(bioregionCountry || "", bioTextWidth, bioCountryFont, "display");
-const bioDescLines = wrapToWidth(bioregionDescription || "", bioTextWidth, bioDescFont, "body");
-if (bioNameLines.length > 2 || bioDescLines.length > 6) {
+const bioDescRaw = wrapToWidth(bioregionDescription || "", bioTextWidth, bioDescFont, "body");
+if (bioNameRaw.length > 2 || bioDescRaw.length > 6) {
   console.warn(
-    `[bwl-map] "${bioregionName}": title wraps to ${bioNameLines.length} line(s), description to ${bioDescLines.length} (max recommended: 2 / 6)`
+    `[bwl-map] "${bioregionName}": title wraps to ${bioNameRaw.length} line(s), description to ${bioDescRaw.length} (max recommended: 2 / 6)`
   );
 }
+const bioNameLines = capLines(bioNameRaw, 2);
+const bioDescLines = capLines(bioDescRaw, 6);
 
 const bioNameLineHeight = 21; // 18px display font
 const bioCountryLineHeight = 12;
@@ -144,8 +147,8 @@ const sisGap = 16;
 
 const csCards = shifts.map((s, i) => {
   const emoji = s.emoji || "";
-  const nameLines = wrapLines(`${emoji} ${s.name}`.trim(), 24);
-  const leverageLines = wrapLines(s.leveragePoint || "", 30);
+  const nameLines = capLines(wrapToWidth(`${emoji} ${s.name}`.trim(), csW - 48, 12, "display"), 2);
+  const leverageLines = capLines(wrapToWidth(s.leveragePoint || "", csW - 48, 9.5, "body"), 5);
   const textHeight = nameLines.length * csNameLineHeight + 4 + leverageLines.length * csLeverageLineHeight;
   const cardHeight = Math.max(64, textHeight + 26);
   return { ...s, nameLines, leverageLines, cardHeight, color: PALETTE[i % PALETTE.length] };
@@ -167,8 +170,8 @@ for (let i = 0; i < 5; i++) {
     const leftInset = hasImage ? sisCardHeight + SIS_TEXT_GAP : 16;
     const textX = sisX + leftInset;
     const textWidth = sisW - leftInset - SIS_TEXT_RIGHT;
-    const nameLines = wrapToWidth(inv.name || "", textWidth, 12, "display");
-    const descLines = wrapToWidth(inv.description || "", textWidth, 9.5, "body");
+    const nameLines = capLines(wrapToWidth(inv.name || "", textWidth, 12, "display"), 3);
+    const descLines = capLines(wrapToWidth(inv.description || "", textWidth, 9.5, "body"), 6);
     const textHeight = nameLines.length * sisNameLineHeight + 4 + descLines.length * sisDescLineHeight;
     return { ...inv, hasImage, nameLines, descLines, textHeight, textX };
   });

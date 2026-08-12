@@ -29,6 +29,19 @@ export function estimateTextWidth(
   return (text.length * fontSize * CHAR_ADVANCE[style]) / SAFETY_FACTOR;
 }
 
+/** Fit a single word to the available width, truncating with "…" if needed. */
+function fitWord(word: string, maxWidth: number, fontSize: number, style: FontStyle): string {
+  if (estimateTextWidth(word, fontSize, style) <= maxWidth) return word;
+  let lo = 0;
+  let hi = word.length;
+  while (lo < hi) {
+    const mid = Math.ceil((lo + hi) / 2);
+    if (estimateTextWidth(word.slice(0, mid) + "…", fontSize, style) <= maxWidth) lo = mid;
+    else hi = mid - 1;
+  }
+  return lo > 0 ? word.slice(0, lo) + "…" : "…";
+}
+
 /** Greedy word-wrap `text` into lines that fit within `maxWidth` px. */
 export function wrapToWidth(
   text: string,
@@ -39,16 +52,25 @@ export function wrapToWidth(
   const words = text.split(/\s+/).filter(Boolean);
   if (words.length === 0) return [];
   const lines: string[] = [];
-  let current = words[0];
+  let current = fitWord(words[0], maxWidth, fontSize, style);
   for (let i = 1; i < words.length; i++) {
-    const candidate = `${current} ${words[i]}`;
+    const word = fitWord(words[i], maxWidth, fontSize, style);
+    const candidate = `${current} ${word}`;
     if (estimateTextWidth(candidate, fontSize, style) <= maxWidth) {
       current = candidate;
     } else {
       lines.push(current);
-      current = words[i];
+      current = word;
     }
   }
   lines.push(current);
   return lines;
+}
+
+/** Keep at most `maxLines` lines; the last kept line gets an ellipsis. */
+export function capLines(lines: string[], maxLines: number): string[] {
+  if (lines.length <= maxLines) return lines;
+  const kept = lines.slice(0, maxLines);
+  kept[maxLines - 1] = kept[maxLines - 1].replace(/\s+$/, "") + "…";
+  return kept;
 }
