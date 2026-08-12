@@ -92,6 +92,12 @@ const csNameLineHeight = 14;
 const csLeverageLineHeight = 12;
 const sisNameLineHeight = 14;
 const sisDescLineHeight = 12;
+// Top-aligned text blocks: every card title starts at the same padding from
+// the card top, so titles line up across the column and text fills the card
+// from the top (instead of floating centered).
+const CS_TEXT_TOP = 12;
+const SIS_TEXT_TOP = 12;
+const NAME_DESC_GAP = 6;
 
 function wrapLines(text: string, maxChars: number) {
   const words = text.split(" ");
@@ -150,7 +156,7 @@ const csCards = shifts.map((s, i) => {
   const nameLines = capLines(wrapToWidth(`${emoji} ${s.name}`.trim(), csW - 48, 12, "display"), 2);
   const leverageLines = capLines(wrapToWidth(s.leveragePoint || "", csW - 48, 9.5, "body"), 5);
   const textHeight = nameLines.length * csNameLineHeight + 4 + leverageLines.length * csLeverageLineHeight;
-  const cardHeight = Math.max(64, textHeight + 26);
+  const cardHeight = Math.max(64, textHeight + 32);
   return { ...s, nameLines, leverageLines, cardHeight, color: PALETTE[i % PALETTE.length] };
 });
 
@@ -175,7 +181,7 @@ for (let i = 0; i < 5; i++) {
     const textHeight = nameLines.length * sisNameLineHeight + 4 + descLines.length * sisDescLineHeight;
     return { ...inv, hasImage, nameLines, descLines, textHeight, textX };
   });
-  const next = Math.max(SIS_MIN_IMG, ...sisCards.map((c) => c.textHeight + 28));
+  const next = Math.max(SIS_MIN_IMG, ...sisCards.map((c) => c.textHeight + 36));
   if (next === sisCardHeight) break;
   sisCardHeight = next;
 }
@@ -232,7 +238,7 @@ function curve(x1: number, y1: number, x2: number, y2: number, strength = 0.5) {
 
 <div class="flow-wrap">
   <svg
-    width="100%"
+    width={width}
     height="auto"
     viewBox={`0 0 ${width} ${height}`}
     preserveAspectRatio="xMidYMid meet"
@@ -352,7 +358,8 @@ function curve(x1: number, y1: number, x2: number, y2: number, strength = 0.5) {
     {/* Critical Shifts */}
     {shiftPositions.map((s) => {
       const textHeight = s.nameLines.length * csNameLineHeight + 4 + s.leverageLines.length * csLeverageLineHeight;
-      const nameY = s.y - textHeight / 2 + csNameLineHeight * 0.8;
+      const cardTop = s.y - s.cardHeight / 2;
+      const nameY = cardTop + CS_TEXT_TOP + csNameLineHeight * 0.8;
       const leverageY = nameY + s.nameLines.length * csNameLineHeight + 4;
       return (
         <g class={`card cs-card cs-${s.slug}`} data-cs={s.slug} tabindex="0">
@@ -389,9 +396,9 @@ function curve(x1: number, y1: number, x2: number, y2: number, strength = 0.5) {
     {innovPositions.map((inv) => {
       const untagged = inv.tags.length === 0;
       const sisImageSrc = resolveImageSource(inv.imageFile, inv.imageUrl);
-      const nameY = inv.y - inv.textHeight / 2 + sisNameLineHeight * 0.8;
-      const descY = nameY + inv.nameLines.length * sisNameLineHeight + 4;
       const imgY = inv.y - inv.cardHeight / 2;
+      const nameY = imgY + SIS_TEXT_TOP + sisNameLineHeight * 0.8;
+      const descY = nameY + inv.nameLines.length * sisNameLineHeight + NAME_DESC_GAP;
       return (
         <g
           class={`card sis-card sis-${inv.slug}`}
@@ -512,11 +519,8 @@ function curve(x1: number, y1: number, x2: number, y2: number, strength = 0.5) {
   }
   .flow-wrap svg {
     display: block;
-    width: 100%;
-    min-width: 600px;
+    width: auto; /* fixed px width from the width attribute: browser zoom scales it */
     height: auto;
-    max-width: 1600px;
-    max-height: 92vh;
     margin: 0 auto;
     background: var(--paper);
   }
