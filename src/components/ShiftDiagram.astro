@@ -193,7 +193,7 @@ function curve(x1: number, y1: number, x2: number, y2: number, strength = 0.5) {
     })}
 
     {/* Critical shift card */}
-    <g class="card shift-card" data-el="shift" tabindex="0">
+    <g class="card shift-card" data-el="shift" data-root="shift" tabindex="0">
       <rect
         x={shiftColLeft}
         y={shiftY - shiftCardHeight / 2}
@@ -420,6 +420,13 @@ function curve(x1: number, y1: number, x2: number, y2: number, strength = 0.5) {
           if (to) match.add(to);
         }
       });
+      // Hovering a systemic innovation also highlights the diagram's root card
+      // (the critical shift card here), so the innovation -> bioregion -> root
+      // chain lights up end to end.
+      if (elId.startsWith("sis:")) {
+        const root = svg!.querySelector<SVGElement>("[data-root]");
+        if (root?.dataset.el) match.add(root.dataset.el);
+      }
       svg!.querySelectorAll<SVGElement>(".card, .conn").forEach((el) => {
         if (el.classList.contains("conn")) {
           const from = el.dataset.from;

@@ -295,7 +295,7 @@ function curve(x1: number, y1: number, x2: number, y2: number, strength = 0.5) {
     })}
 
     {/* Bioregion card: image strip on top, text below */}
-    <g class="card bio-card" data-el="bio" tabindex="0">
+    <g class="card bio-card" data-el="bio" data-root="bio" tabindex="0">
       <rect
         x={bioX - bioW / 2}
         y={bioTop}
@@ -502,6 +502,13 @@ function curve(x1: number, y1: number, x2: number, y2: number, strength = 0.5) {
           if (to) match.add(to);
         }
       });
+      // Hovering a systemic innovation also highlights the diagram's root card
+      // (the bioregion card here), so the innovation -> shift -> root chain
+      // lights up end to end.
+      if (elId.startsWith("sis:")) {
+        const root = svg!.querySelector<SVGElement>("[data-root]");
+        if (root?.dataset.el) match.add(root.dataset.el);
+      }
       svg!.querySelectorAll<SVGElement>(".card, .conn").forEach((el) => {
         if (el.classList.contains("conn")) {
           const from = el.dataset.from;
