@@ -4,6 +4,10 @@
  * focus) with clickable region markers, pulse rings, label pills and
  * ringed-photo hover cards, plus a bioregion list side panel.
  *
+ * Layout: the hero fills the viewport; the left ~80% is the map (ocean
+ * backdrop, map centred at its natural aspect ratio), the right ~20% is the
+ * bioregion list panel styled like the list-view page.
+ *
  * Markers are positioned by the same linear projection used to generate the
  * land geometry (src/lib/map-projection.ts), so they sit on the actual spots.
  */
@@ -26,52 +30,54 @@ const paths = [...new Set(europeMap.countries.flatMap((c) => c.d))];
 
 <div class="bwc-hero" id="bwcHero">
   <div class="bwc-layout">
-    <div class="bwc-stage" style={`aspect-ratio:${W}/${H}`}>
-      <svg
-        class="bwc-map"
-        viewBox={`0 0 ${W} ${H}`}
-        role="img"
-        aria-label="Map of Europe with bioregion markers"
-        preserveAspectRatio="xMidYMid meet"
-      >
-        <defs>
-          <filter id="bwc-shadow" x="-10%" y="-10%" width="130%" height="140%">
-            <feDropShadow dx="0" dy="10" stdDeviation="14" flood-color="#20404f" flood-opacity="0.28" />
-          </filter>
-        </defs>
-        <g class="land" filter="url(#bwc-shadow)">
-          {paths.map((d) => <path d={d} />)}
-        </g>
-      </svg>
+    <div class="bwc-stage-col">
+      <div class="bwc-stage" style={`aspect-ratio:${W}/${H}`}>
+        <svg
+          class="bwc-map"
+          viewBox={`0 0 ${W} ${H}`}
+          role="img"
+          aria-label="Map of Europe with bioregion markers"
+          preserveAspectRatio="xMidYMid meet"
+        >
+          <defs>
+            <filter id="bwc-shadow" x="-10%" y="-10%" width="130%" height="140%">
+              <feDropShadow dx="0" dy="10" stdDeviation="14" flood-color="#20404f" flood-opacity="0.28" />
+            </filter>
+          </defs>
+          <g class="land" filter="url(#bwc-shadow)">
+            {paths.map((d) => <path d={d} />)}
+          </g>
+        </svg>
 
-      <div class="bwc-markers">
-        {regions.map((r, i) => {
-          const img = notionImageUrl(r.imageFile) ?? r.imageUrl ?? undefined;
-          return (
-            <a
-              class="bwc-marker"
-              href={`${base}bioregions/${r.slug}/`}
-              style={`--x:${r.x.toFixed(3)}%;--y:${r.y.toFixed(3)}%;--i:${i};--ring:${r.ring}`}
-              aria-label={r.name}
-            >
-              <span class="bwc-dot"></span>
-              <span class="bwc-label">{r.name}</span>
-              <span class="bwc-card">
-                <span class="bwc-ring">{img && <img src={img} alt="" loading="lazy" />}</span>
-                <span class="bwc-card-title">{r.name}</span>
-                <span class="bwc-card-desc">{r.desc}</span>
-              </span>
-            </a>
-          );
-        })}
-      </div>
+        <div class="bwc-markers">
+          {regions.map((r, i) => {
+            const img = notionImageUrl(r.imageFile) ?? r.imageUrl ?? undefined;
+            return (
+              <a
+                class="bwc-marker"
+                href={`${base}bioregions/${r.slug}/`}
+                style={`--x:${r.x.toFixed(3)}%;--y:${r.y.toFixed(3)}%;--i:${i};--ring:${r.ring}`}
+                aria-label={r.name}
+              >
+                <span class="bwc-dot"></span>
+                <span class="bwc-label">{r.name}</span>
+                <span class="bwc-card">
+                  <span class="bwc-ring">{img && <img src={img} alt="" loading="lazy" />}</span>
+                  <span class="bwc-card-title">{r.name}</span>
+                  <span class="bwc-card-desc">{r.desc}</span>
+                </span>
+              </a>
+            );
+          })}
+        </div>
 
-      <div class="bwc-headline">
-        <h1 class="bwc-title">
-          <span class="bwc-line">Weaving Communities of Action,</span>
-          <span class="bwc-line">Rooted in Place</span>
-        </h1>
-        <div class="bwc-subtitle">Explore a bioregion by clicking on the map</div>
+        <div class="bwc-headline">
+          <h1 class="bwc-title">
+            <span class="bwc-line">Weaving Communities of Action,</span>
+            <span class="bwc-line">Rooted in Place</span>
+          </h1>
+          <div class="bwc-subtitle">Explore a bioregion by clicking on the map</div>
+        </div>
       </div>
     </div>
 
@@ -123,46 +129,56 @@ const paths = [...new Set(europeMap.countries.flatMap((c) => c.d))];
   .bwc-hero {
     position: relative;
     width: 100%;
+    min-height: 100vh;
+    min-height: 100dvh;
+    display: flex;
     overflow: hidden;
     font-family: var(--bwc-font-body);
     background: var(--bwc-ocean);
   }
 
-  /* map + side panel side by side */
+  /* 80 / 20 split: map column vs side panel */
   .bwc-layout {
     display: flex;
     align-items: stretch;
-    gap: 28px;
-    max-width: 1640px;
-    margin: 0 auto;
-    padding: 20px 20px 20px 0;
+    gap: 24px;
+    width: 100%;
+    padding: 24px;
   }
-
+  .bwc-stage-col {
+    flex: 4 1 0;
+    min-width: 0;
+    display: flex;
+  }
   .bwc-stage {
     position: relative;
-    flex: 1 1 auto;
-    min-width: 0;
+    width: 100%;
+    max-width: 100%;
+    max-height: 100%;
+    margin: auto;
   }
 
   .bwc-map {
     display: block;
     width: 100%;
-    height: auto;
+    height: 100%;
     opacity: 0;
     transform: scale(1.05);
   }
 
   .land path { fill: var(--bwc-land); }
 
-  /* -------- side panel -------- */
+  /* -------- side panel (styled like the list-view page) -------- */
   .bio-panel {
-    flex: 0 0 320px;
+    flex: 1 1 0;
+    max-width: 400px;
+    min-width: 0;
     display: flex;
     flex-direction: column;
     background: var(--bwc-card-bg);
     border: 1px solid rgba(32, 64, 79, 0.18);
     border-radius: 18px;
-    padding: 22px 18px 16px;
+    padding: 26px 20px 18px;
     box-shadow: 0 18px 40px var(--bwc-shadow);
   }
   .bio-eyebrow {
@@ -177,27 +193,29 @@ const paths = [...new Set(europeMap.countries.flatMap((c) => c.d))];
   .bio-title {
     font-family: var(--bwc-font-head);
     font-weight: normal;
-    font-size: 24px;
+    font-size: 26px;
     color: var(--bwc-title);
-    margin-bottom: 14px;
+    margin-bottom: 18px;
   }
   .bio-list {
+    flex: 1 1 auto;
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    justify-content: space-evenly;
+    gap: 12px;
     overflow-y: auto;
-    max-height: 520px;
-    padding-right: 4px;
+    padding-right: 2px;
   }
   .bio-row {
     display: flex;
     justify-content: space-between;
     align-items: center;
     gap: 10px;
-    padding: 11px 13px;
-    border-radius: 10px;
-    border: 1px solid rgba(32, 64, 79, 0.12);
+    min-height: 50px;
+    padding: 10px 14px;
     background: #fffff0;
+    border: 1px solid rgba(32, 64, 79, 0.12);
+    border-radius: 10px;
     text-decoration: none;
     transition: border-color 0.15s ease, background 0.15s ease;
   }
@@ -208,7 +226,7 @@ const paths = [...new Set(europeMap.countries.flatMap((c) => c.d))];
   .bio-name {
     font-family: var(--bwc-font-head);
     font-weight: normal;
-    font-size: 14px;
+    font-size: 15px;
     line-height: 1.25;
     color: var(--bwc-title);
   }
@@ -222,10 +240,10 @@ const paths = [...new Set(europeMap.countries.flatMap((c) => c.d))];
     color: #6d7a6b;
     border: 1px solid rgba(32, 64, 79, 0.15);
     border-radius: 999px;
-    padding: 3px 8px;
+    padding: 3px 9px;
   }
   .bio-more {
-    margin-top: 14px;
+    margin-top: 16px;
     text-align: center;
     font-family: var(--bwc-font-body);
     font-size: 12.5px;
@@ -457,9 +475,12 @@ const paths = [...new Set(europeMap.countries.flatMap((c) => c.d))];
 
   /* -------- responsive -------- */
   @media (max-width: 1100px) {
-    .bwc-layout { flex-direction: column; padding: 0 0 20px; }
-    .bio-panel { flex: none; width: 100%; max-height: none; }
-    .bio-list { max-height: none; }
+    .bwc-hero { min-height: auto; display: block; }
+    .bwc-layout { flex-direction: column; gap: 20px; padding: 0 0 20px; }
+    .bwc-stage-col { flex: none; width: 100%; }
+    .bwc-stage { max-height: none; }
+    .bio-panel { flex: none; max-width: none; width: 100%; }
+    .bio-list { max-height: none; justify-content: flex-start; }
     .bwc-headline { top: 4%; left: 4%; width: 70%; }
     .bwc-marker { width: var(--hit-m, 6%); }
   }
