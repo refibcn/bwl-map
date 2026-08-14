@@ -1,0 +1,37 @@
+---
+import { getCollection } from "astro:content";
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import SiteNav from "../../components/SiteNav.astro";
+import { buildShiftPages } from "../../lib/shift-pages";
+
+const [bioEntries, shiftEntries] = await Promise.all([
+  getCollection("bioregions"),
+  getCollection("shifts"),
+]);
+const shifts = buildShiftPages(
+  bioEntries.map((b) => b.data),
+  shiftEntries.map((s) => s.data)
+);
+---
+
+<BaseLayout title="Critical shifts — BWL Map">
+  <SiteNav current="shifts" />
+  <div class="wrap" style="padding-top:4rem;padding-bottom:5rem">
+    <p class="eyebrow">Bioregional Weaving Labs</p>
+    <h1 style="font-size:34px;margin:0.5rem 0 0.25rem">Critical shifts</h1>
+    <p style="margin-bottom:2rem;color:var(--mist)">
+      The systemic shifts the portfolio works on — see which bioregions and innovations address each one.
+    </p>
+    <div style="display:grid;gap:10px">
+      {shifts.map((s) => (
+        <a class="landing-row" href={`${import.meta.env.BASE_URL}critical-shifts/${s.slug}/`}>
+          <span class="name">{s.emoji ? `${s.emoji} ` : ""}{s.name}</span>
+          <span style="display:flex;gap:8px">
+            <span class="badge-soft">{s.bioregions.length} {s.bioregions.length === 1 ? "bioregion" : "bioregions"}</span>
+            <span class="badge-soft">{s.innovations.length} {s.innovations.length === 1 ? "innovation" : "innovations"}</span>
+          </span>
+        </a>
+      ))}
+    </div>
+  </div>
+</BaseLayout>

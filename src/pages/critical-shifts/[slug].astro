@@ -6,8 +6,14 @@ import ShiftDiagram from "../../components/ShiftDiagram.astro";
 import { buildShiftPages } from "../../lib/shift-pages";
 
 export async function getStaticPaths() {
-  const all = await getCollection("bioregions");
-  const shifts = buildShiftPages(all.map((b) => b.data));
+  const [bioEntries, shiftEntries] = await Promise.all([
+    getCollection("bioregions"),
+    getCollection("shifts"),
+  ]);
+  const shifts = buildShiftPages(
+    bioEntries.map((b) => b.data),
+    shiftEntries.map((s) => s.data)
+  );
   return shifts.map((s) => ({
     params: { slug: s.slug },
     props: { shift: s },
@@ -21,6 +27,11 @@ const base = import.meta.env.BASE_URL.endsWith("/") ? import.meta.env.BASE_URL :
 <BaseLayout title={`${shift.name} — Critical shift`}>
   <a class="back-link" href={`${base}critical-shifts/`} aria-label="Back to all critical shifts">← Critical shifts</a>
   <ShiftDiagram shift={shift} bioregions={shift.bioregions} innovations={shift.innovations} />
+  {shift.bioregions.length === 0 && (
+    <p class="empty-note">
+      No published systemic innovations for this critical shift yet — the page will fill in as bioregions link their work.
+    </p>
+  )}
 </BaseLayout>
 
 <style>
@@ -48,5 +59,14 @@ const base = import.meta.env.BASE_URL.endsWith("/") ? import.meta.env.BASE_URL :
     background: var(--bwl-primary);
     color: #fff;
     border-color: var(--bwl-primary);
+  }
+  .empty-note {
+    max-width: 1080px;
+    margin: 2rem auto 0;
+    padding: 0 1.5rem;
+    text-align: center;
+    color: var(--mist);
+    font-family: var(--font-body);
+    font-size: 14px;
   }
 </style>

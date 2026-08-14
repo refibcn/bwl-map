@@ -9,6 +9,8 @@ const DATA_SOURCES = {
   criticalShifts: "35db5c91-1953-80ab-aae6-000b64ea6545",
 };
 
+export { DATA_SOURCES };
+
 export interface CriticalShift {
   id: string;
   slug: string;
@@ -50,20 +52,20 @@ export interface BioregionEntry {
   systemicInnovations: SystemicInnovation[];
 }
 
-function getTitle(props: any) {
+export function getTitle(props: any) {
   return props.Name?.title?.map((t: any) => t.plain_text).join("") || "";
 }
 
-function getTagTitle(props: any) {
+export function getTagTitle(props: any) {
   return props.Tag?.title?.map((t: any) => t.plain_text).join("") || "";
 }
 
-function getEmoji(page: any) {
+export function getEmoji(page: any) {
   if (page.icon?.type === "emoji") return page.icon.emoji;
   return null;
 }
 
-function getRichText(props: any, key: string) {
+export function getRichText(props: any, key: string) {
   return props[key]?.rich_text?.map((t: any) => t.plain_text).join("") || "";
 }
 
@@ -195,14 +197,14 @@ async function resolvePageIcon(
   return { file: null, url: null };
 }
 
-function slugify(text: string) {
+export function slugify(text: string) {
   return text
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/(^-|-$)/g, "");
 }
 
-function deriveShiftName(shiftText: string) {
+export function deriveShiftName(shiftText: string) {
   const text = shiftText.toLowerCase();
   if (text.includes("policy")) return "Policy and advocacy";
   if (text.includes("capital") || text.includes("financ") || text.includes("ownership")) return "Finance and ownership";
@@ -237,7 +239,7 @@ async function notionFetch(path: string, options: RequestInit = {}, token: strin
   return res.json();
 }
 
-async function queryAll(dsId: string, token: string, filter?: any) {
+export async function queryAll(dsId: string, token: string, filter?: any) {
   const results: any[] = [];
   let cursor: string | undefined;
   do {

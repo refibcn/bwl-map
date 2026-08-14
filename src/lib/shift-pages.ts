@@ -1,4 +1,5 @@
 import type { BioregionEntry } from "./notion-loader";
+import type { ShiftRecord } from "./shift-loader";
 
 /**
  * Critical Shifts section — shift-centric view built from the SAME Notion
@@ -44,26 +45,31 @@ export interface ShiftPageData {
   innovations: ShiftInnovationRef[];
 }
 
-/** Aggregate bioregion entries into one record per critical shift. */
-export function buildShiftPages(entries: BioregionEntry[]): ShiftPageData[] {
-  const bySlug = new Map<string, ShiftPageData>();
+/**
+ * Aggregate bioregion entries into one record per critical shift.
+ *
+ * `shifts` is the authoritative full list (every shift in the database gets a
+ * page, even with no published innovations); the bioregion entries provide
+ * the links: a bioregion is listed when it works on the shift, and the
+ * innovations shown are its published ones tagged with the shift.
+ */
+export function buildShiftPages(entries: BioregionEntry[], shifts: ShiftRecord[]): ShiftPageData[] {
+  const pages: ShiftPageData[] = shifts.map((s) => ({
+    id: s.id,
+    slug: s.slug,
+    name: s.name,
+    emoji: s.emoji,
+    shift: s.shift,
+    leveragePoint: s.leveragePoint,
+    systemicBarrier: s.systemicBarrier,
+    bioregions: [],
+    innovations: [],
+  }));
+  const bySlug = new Map(pages.map((p) => [p.slug, p]));
   for (const b of entries) {
     for (const s of b.criticalShifts) {
-      let page = bySlug.get(s.slug);
-      if (!page) {
-        page = {
-          id: s.id,
-          slug: s.slug,
-          name: s.name,
-          emoji: s.emoji,
-          shift: s.shift,
-          leveragePoint: s.leveragePoint,
-          systemicBarrier: s.systemicBarrier,
-          bioregions: [],
-          innovations: [],
-        };
-        bySlug.set(s.slug, page);
-      }
+      const page = bySlug.get(s.slug);
+      if (!page) continue;
       if (!page.bioregions.some((x) => x.slug === b.slug)) {
         page.bioregions.push({
           slug: b.slug,
@@ -90,7 +96,7 @@ export function buildShiftPages(entries: BioregionEntry[]): ShiftPageData[] {
       }
     }
   }
-  return [...bySlug.values()].sort((a, b) => a.name.localeCompare(b.name));
+  return pages.sort((a, b) => a.name.localeCompare(b.name));
 }
 
 /** Stable colour per shift (same colour on every page that mentions it). */
