@@ -26,7 +26,7 @@ interface Props {
 
 const { shift, bioregions, innovations } = Astro.props as Props;
 
-const base = import.meta.env.BASE_URL || "";
+const base = import.meta.env.BASE_URL.endsWith("/") ? import.meta.env.BASE_URL : import.meta.env.BASE_URL + "/";
 function withBase(path: string | null): string | null {
   if (!path) return null;
   if (/^(https?:|data:)/i.test(path)) return path;
