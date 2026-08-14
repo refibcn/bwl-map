@@ -41,8 +41,10 @@ const EUROPE = new Set([
 
 /** Clip window (lon/lat) — drops far-flung islands (Canaries, Azores,
  *  Svalbard, Jan Mayen) and the parts of Ukraine east of the map.
- *  latMax 71.5 keeps mainland Norway (Nordkapp ~71.2N) but cuts Svalbard. */
-const CLIP = { lngMin: -14, lngMax: 33, latMin: 33, latMax: 71.5 };
+ *  latMax 60 keeps Denmark, the Baltics and the UK but cuts the
+ *  Scandinavian peninsula (Norway/Sweden/Finland) so the default view
+ *  focuses on central and southern Europe. */
+const CLIP = { lngMin: -14, lngMax: 33, latMin: 33, latMax: 60 };
 
 function inWindow([lng, lat]) {
   return lng >= CLIP.lngMin && lng <= CLIP.lngMax && lat >= CLIP.latMin && lat <= CLIP.latMax;

@@ -1,40 +1,22 @@
 ---
 /**
- * Europe map landing — BWL style, inspired by the w1 map hero:
- * a single stylised map with clickable region markers, pulse rings,
- * label pills and ringed-photo hover cards.
- *
- * Two variants:
- *   - "stylized":    merged landmass (no country borders), soft drop shadow,
- *                    deep-teal decorative sea bottom-left — the w1 imitation.
- *   - "geographic":  real country shapes with subtle borders on flat ocean.
+ * BWL map landing — w1-style hero: a stylised Europe map (central/southern
+ * focus) with clickable region markers, pulse rings, label pills and
+ * ringed-photo hover cards, plus a bioregion list side panel.
  *
  * Markers are positioned by the same linear projection used to generate the
  * land geometry (src/lib/map-projection.ts), so they sit on the actual spots.
  */
 import europeMap from "../data/europe-map.json";
 import { notionImageUrl } from "../lib/images";
-
-export interface MapRegion {
-  slug: string;
-  name: string;
-  country: string;
-  desc: string;
-  imageFile: string | null;
-  imageUrl: string | null;
-  x: number; // percent of stage
-  y: number;
-  ring: string;
-}
+import type { MapRegion } from "../lib/map-regions";
 
 interface Props {
   regions: MapRegion[];
-  variant: "stylized" | "geographic";
 }
 
-const { regions, variant } = Astro.props;
+const { regions } = Astro.props;
 const base = import.meta.env.BASE_URL.endsWith("/") ? import.meta.env.BASE_URL : import.meta.env.BASE_URL + "/";
-const viewBox = `${europeMap.width} ${europeMap.height}`;
 const W = europeMap.width;
 const H = europeMap.height;
 // Deduplicate path strings: several countries share land paths in the 50m
@@ -42,57 +24,71 @@ const H = europeMap.height;
 const paths = [...new Set(europeMap.countries.flatMap((c) => c.d))];
 ---
 
-<div class="bwc-hero" id="bwcHero" data-variant={variant}>
-  <div class="bwc-stage" style={`aspect-ratio:${W}/${H}`}>
-    <svg
-      class="bwc-map"
-      viewBox={`0 0 ${W} ${H}`}
-      role="img"
-      aria-label="Map of Europe with bioregion markers"
-      preserveAspectRatio="xMidYMid meet"
-    >
-      <defs>
-        <filter id="bwc-shadow" x="-10%" y="-10%" width="130%" height="140%">
-          <feDropShadow dx="0" dy="10" stdDeviation="14" flood-color="#20404f" flood-opacity="0.28" />
-        </filter>
-      </defs>
-      <g class="land" {...(variant === "stylized" ? { filter: "url(#bwc-shadow)" } : {})}>
-        {paths.map((d) => <path d={d} />)}
-      </g>
-    </svg>
+<div class="bwc-hero" id="bwcHero">
+  <div class="bwc-layout">
+    <div class="bwc-stage" style={`aspect-ratio:${W}/${H}`}>
+      <svg
+        class="bwc-map"
+        viewBox={`0 0 ${W} ${H}`}
+        role="img"
+        aria-label="Map of Europe with bioregion markers"
+        preserveAspectRatio="xMidYMid meet"
+      >
+        <defs>
+          <filter id="bwc-shadow" x="-10%" y="-10%" width="130%" height="140%">
+            <feDropShadow dx="0" dy="10" stdDeviation="14" flood-color="#20404f" flood-opacity="0.28" />
+          </filter>
+        </defs>
+        <g class="land" filter="url(#bwc-shadow)">
+          {paths.map((d) => <path d={d} />)}
+        </g>
+      </svg>
 
-    {variant === "stylized" && <div class="bwc-deepsea" aria-hidden="true"></div>}
+      <div class="bwc-markers">
+        {regions.map((r, i) => {
+          const img = notionImageUrl(r.imageFile) ?? r.imageUrl ?? undefined;
+          return (
+            <a
+              class="bwc-marker"
+              href={`${base}bioregions/${r.slug}/`}
+              style={`--x:${r.x.toFixed(3)}%;--y:${r.y.toFixed(3)}%;--i:${i};--ring:${r.ring}`}
+              aria-label={r.name}
+            >
+              <span class="bwc-pulse"></span>
+              <span class="bwc-hit"></span>
+              <span class="bwc-label">{r.name}</span>
+              <span class="bwc-card">
+                <span class="bwc-ring">{img && <img src={img} alt="" loading="lazy" />}</span>
+                <span class="bwc-card-title">{r.name}</span>
+                <span class="bwc-card-desc">{r.desc}</span>
+              </span>
+            </a>
+          );
+        })}
+      </div>
 
-    <div class="bwc-markers">
-      {regions.map((r, i) => {
-        const img = notionImageUrl(r.imageFile) ?? r.imageUrl ?? undefined;
-        return (
-          <a
-            class="bwc-marker"
-            href={`${base}bioregions/${r.slug}/`}
-            style={`--x:${r.x.toFixed(3)}%;--y:${r.y.toFixed(3)}%;--i:${i};--ring:${r.ring}`}
-            aria-label={r.name}
-          >
-            <span class="bwc-pulse"></span>
-            <span class="bwc-hit"></span>
-            <span class="bwc-label">{r.name}</span>
-            <span class="bwc-card">
-              <span class="bwc-ring">{img && <img src={img} alt="" loading="lazy" />}</span>
-              <span class="bwc-card-title">{r.name}</span>
-              <span class="bwc-card-desc">{r.desc}</span>
-            </span>
+      <div class="bwc-headline">
+        <h1 class="bwc-title">
+          <span class="bwc-line">Weaving Communities of Action,</span>
+          <span class="bwc-line">Rooted in Place</span>
+        </h1>
+        <div class="bwc-subtitle">Explore a bioregion by clicking on the map</div>
+      </div>
+    </div>
+
+    <aside class="bio-panel">
+      <p class="bio-eyebrow">Bioregional Weaving Labs</p>
+      <h2 class="bio-title">Bioregions</h2>
+      <div class="bio-list">
+        {regions.map((r) => (
+          <a class="bio-row" href={`${base}bioregions/${r.slug}/`}>
+            <span class="bio-name">{r.name}</span>
+            <span class="bio-country">{r.country}</span>
           </a>
-        );
-      })}
-    </div>
-
-    <div class="bwc-headline">
-      <h1 class="bwc-title">
-        <span class="bwc-line">Weaving Communities of Action,</span>
-        <span class="bwc-line">Rooted in Place</span>
-      </h1>
-      <div class="bwc-subtitle">Explore a bioregion by clicking on the map</div>
-    </div>
+        ))}
+      </div>
+      <a class="bio-more" href={`${base}list/`}>List view →</a>
+    </aside>
   </div>
 </div>
 
@@ -111,7 +107,6 @@ const paths = [...new Set(europeMap.countries.flatMap((c) => c.d))];
      ================================================================ */
   .bwc-hero {
     --bwc-ocean: #8da5af;      /* light blue-grey sea            */
-    --bwc-deep: #2a6a7c;       /* deep-teal decorative sea       */
     --bwc-land: #e9e6d5;       /* warm cream land                */
     --bwc-title: #20404f;      /* headline colour                */
     --bwc-subtitle: #0a1419;
@@ -122,7 +117,6 @@ const paths = [...new Set(europeMap.countries.flatMap((c) => c.d))];
     --bwc-shadow: rgba(20, 40, 30, 0.28);
     --bwc-font-head: "Sentinel Bold", Georgia, "Times New Roman", serif;
     --bwc-font-body: "Lato", Helvetica, Arial, sans-serif;
-    --bwc-container: 1400px;
   }
 
   .bwc-hero * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -135,11 +129,20 @@ const paths = [...new Set(europeMap.countries.flatMap((c) => c.d))];
     background: var(--bwc-ocean);
   }
 
+  /* map + side panel side by side */
+  .bwc-layout {
+    display: flex;
+    align-items: stretch;
+    gap: 28px;
+    max-width: 1640px;
+    margin: 0 auto;
+    padding: 20px 20px 20px 0;
+  }
+
   .bwc-stage {
     position: relative;
-    width: 100%;
-    max-width: var(--bwc-container);
-    margin: 0 auto;
+    flex: 1 1 auto;
+    min-width: 0;
   }
 
   .bwc-map {
@@ -150,29 +153,89 @@ const paths = [...new Set(europeMap.countries.flatMap((c) => c.d))];
     transform: scale(1.05);
   }
 
-  /* -------- land styling per variant -------- */
-  .bwc-hero[data-variant="stylized"] .land path {
-    fill: var(--bwc-land);
-  }
-  .bwc-hero[data-variant="geographic"] .land path {
-    fill: var(--bwc-land);
-    stroke: rgba(32, 64, 79, 0.4);
-    stroke-width: 1;
-    stroke-linejoin: round;
-  }
+  .land path { fill: var(--bwc-land); }
 
-  /* deep-teal decorative sea, bottom-left (stylized only) */
-  .bwc-deepsea {
-    position: absolute;
-    left: -18%;
-    bottom: -34%;
-    width: 58%;
-    aspect-ratio: 1/1;
-    border-radius: 50%;
-    background: radial-gradient(circle at 35% 35%, #3b7487, var(--bwc-deep) 70%);
-    opacity: 0.95;
-    pointer-events: none;
+  /* -------- side panel -------- */
+  .bio-panel {
+    flex: 0 0 320px;
+    display: flex;
+    flex-direction: column;
+    background: var(--bwc-card-bg);
+    border: 1px solid rgba(32, 64, 79, 0.18);
+    border-radius: 18px;
+    padding: 22px 18px 16px;
+    box-shadow: 0 18px 40px var(--bwc-shadow);
   }
+  .bio-eyebrow {
+    font-family: var(--bwc-font-body);
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: #6d7a6b;
+    margin-bottom: 6px;
+  }
+  .bio-title {
+    font-family: var(--bwc-font-head);
+    font-weight: normal;
+    font-size: 24px;
+    color: var(--bwc-title);
+    margin-bottom: 14px;
+  }
+  .bio-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    overflow-y: auto;
+    max-height: 520px;
+    padding-right: 4px;
+  }
+  .bio-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    padding: 11px 13px;
+    border-radius: 10px;
+    border: 1px solid rgba(32, 64, 79, 0.12);
+    background: #fffff0;
+    text-decoration: none;
+    transition: border-color 0.15s ease, background 0.15s ease;
+  }
+  .bio-row:hover {
+    border-color: var(--bwc-card-desc);
+    background: #fff;
+  }
+  .bio-name {
+    font-family: var(--bwc-font-head);
+    font-weight: normal;
+    font-size: 14px;
+    line-height: 1.25;
+    color: var(--bwc-title);
+  }
+  .bio-country {
+    flex-shrink: 0;
+    font-family: var(--bwc-font-body);
+    font-size: 10.5px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #6d7a6b;
+    border: 1px solid rgba(32, 64, 79, 0.15);
+    border-radius: 999px;
+    padding: 3px 8px;
+  }
+  .bio-more {
+    margin-top: 14px;
+    text-align: center;
+    font-family: var(--bwc-font-body);
+    font-size: 12.5px;
+    font-weight: 700;
+    color: var(--bwc-title);
+    text-decoration: none;
+    opacity: 0.75;
+  }
+  .bio-more:hover { opacity: 1; color: var(--bwc-card-desc); }
 
   /* -------- markers -------- */
   .bwc-markers { position: absolute; inset: 0; }
@@ -348,15 +411,13 @@ const paths = [...new Set(europeMap.countries.flatMap((c) => c.d))];
     display: block;
   }
 
-  /* -------- headline -------- */
+  /* -------- headline (top-left) -------- */
   .bwc-headline {
     position: absolute;
-    top: 7%;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 100%;
-    padding: 0 20px;
-    text-align: center;
+    top: 6%;
+    left: 4%;
+    width: 56%;
+    text-align: left;
     z-index: 4;
     pointer-events: none;
   }
@@ -364,13 +425,13 @@ const paths = [...new Set(europeMap.countries.flatMap((c) => c.d))];
     font-family: var(--bwc-font-head);
     font-weight: normal;
     color: var(--bwc-title);
-    font-size: 60px;
+    font-size: clamp(30px, 3.4vw, 54px);
     line-height: 1.08;
     letter-spacing: 0.005em;
   }
   .bwc-title .bwc-line { display: block; opacity: 0; transform: translateY(28px); }
   .bwc-subtitle {
-    margin-top: 18px;
+    margin-top: 16px;
     display: inline-block;
     font-family: var(--bwc-font-body);
     font-size: clamp(13px, 1vw, 15px);
@@ -416,13 +477,14 @@ const paths = [...new Set(europeMap.countries.flatMap((c) => c.d))];
   }
 
   /* -------- responsive -------- */
-  @media (max-width: 900px) {
-    .bwc-headline { top: 4%; }
-    .bwc-title { font-size: 34px; }
-    .bwc-card { width: 168px; }
+  @media (max-width: 1100px) {
+    .bwc-layout { flex-direction: column; padding: 0 0 20px; }
+    .bio-panel { flex: none; width: 100%; max-height: none; }
+    .bio-list { max-height: none; }
+    .bwc-headline { top: 4%; left: 4%; width: 70%; }
     .bwc-marker { width: var(--hit-m, 6%); }
   }
   @media (max-width: 520px) {
-    .bwc-title { font-size: 26px; }
+    .bwc-headline { width: 88%; }
   }
 </style>
