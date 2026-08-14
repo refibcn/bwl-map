@@ -54,8 +54,7 @@ const paths = [...new Set(europeMap.countries.flatMap((c) => c.d))];
               style={`--x:${r.x.toFixed(3)}%;--y:${r.y.toFixed(3)}%;--i:${i};--ring:${r.ring}`}
               aria-label={r.name}
             >
-              <span class="bwc-pulse"></span>
-              <span class="bwc-hit"></span>
+              <span class="bwc-dot"></span>
               <span class="bwc-label">{r.name}</span>
               <span class="bwc-card">
                 <span class="bwc-ring">{img && <img src={img} alt="" loading="lazy" />}</span>
@@ -256,41 +255,21 @@ const paths = [...new Set(europeMap.countries.flatMap((c) => c.d))];
   .bwc-marker:hover,
   .bwc-marker:focus-within { z-index: 60; }
 
-  .bwc-hit {
+  /* the single marker dot (solid circle in the region colour) */
+  .bwc-dot {
     position: absolute;
-    inset: 0;
+    inset: 16%;
     border-radius: 50%;
-    border: 2px solid var(--ring, #c9762b);
-    background: radial-gradient(
-      circle,
-      color-mix(in srgb, var(--ring, #c9762b) 22%, transparent),
-      transparent 70%
-    );
-    opacity: 0;
-    transition: opacity 0.3s ease, transform 0.35s cubic-bezier(0.2, 0.9, 0.3, 1.3);
-    transform: scale(0.7);
+    background: var(--ring, #c9762b);
+    box-shadow:
+      inset 0 2px 3px rgba(255, 255, 255, 0.35),
+      0 2px 8px rgba(32, 64, 79, 0.35);
+    transition: transform 0.25s ease;
   }
-  .bwc-marker:hover .bwc-hit,
-  .bwc-marker:focus-visible .bwc-hit {
-    opacity: 1;
-    transform: scale(1.15);
+  .bwc-marker:hover .bwc-dot,
+  .bwc-marker:focus-visible .bwc-dot {
+    transform: scale(1.18);
   }
-
-  .bwc-hero.is-loaded .bwc-marker .bwc-pulse {
-    position: absolute;
-    inset: 0;
-    border-radius: 50%;
-    border: 2px solid var(--ring, #c9762b);
-    animation: bwc-pulse 2.6s ease-out infinite;
-    animation-delay: calc(2s + var(--i) * 0.2s);
-  }
-  @keyframes bwc-pulse {
-    0% { transform: scale(0.7); opacity: 0.55; }
-    70% { transform: scale(1.5); opacity: 0; }
-    100% { opacity: 0; }
-  }
-  .bwc-marker:hover .bwc-pulse,
-  .bwc-marker:focus-visible .bwc-pulse { animation-play-state: paused; opacity: 0; }
 
   /* name label pill under each marker */
   .bwc-label {

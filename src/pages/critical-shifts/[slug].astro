@@ -1,0 +1,52 @@
+---
+import { getCollection } from "astro:content";
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import SiteNav from "../../components/SiteNav.astro";
+import ShiftDiagram from "../../components/ShiftDiagram.astro";
+import { buildShiftPages } from "../../lib/shift-pages";
+
+export async function getStaticPaths() {
+  const all = await getCollection("bioregions");
+  const shifts = buildShiftPages(all.map((b) => b.data));
+  return shifts.map((s) => ({
+    params: { slug: s.slug },
+    props: { shift: s },
+  }));
+}
+
+const { shift } = Astro.props as any;
+const base = import.meta.env.BASE_URL.endsWith("/") ? import.meta.env.BASE_URL : import.meta.env.BASE_URL + "/";
+---
+
+<BaseLayout title={`${shift.name} — Critical shift`}>
+  <a class="back-link" href={`${base}critical-shifts/`} aria-label="Back to all critical shifts">← Critical shifts</a>
+  <ShiftDiagram shift={shift} bioregions={shift.bioregions} innovations={shift.innovations} />
+</BaseLayout>
+
+<style>
+  .back-link {
+    position: fixed;
+    top: 16px;
+    left: 16px;
+    z-index: 20;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 14px;
+    border-radius: 999px;
+    border: 1px solid var(--line-strong);
+    background: var(--paper-raised);
+    color: var(--bwl-primary);
+    font-family: var(--font-body);
+    font-size: 13px;
+    font-weight: 700;
+    text-decoration: none;
+    box-shadow: 0 1px 4px rgba(32, 64, 79, 0.12);
+    transition: background 0.15s ease, border-color 0.15s ease;
+  }
+  .back-link:hover {
+    background: var(--bwl-primary);
+    color: #fff;
+    border-color: var(--bwl-primary);
+  }
+</style>

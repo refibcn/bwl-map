@@ -117,7 +117,7 @@ function wrapLines(text: string, maxChars: number) {
 
 // --- Bioregion card: image strip on top, title + country + description below ---
 const BIO_TEXT_INSET = 20;
-const BIO_TEXT_PAD = 14; // vertical padding of the text section inside the card
+const BIO_TEXT_PAD = 24; // vertical padding of the text section inside the card (roomier below the description)
 const bioTextWidth = bioW - BIO_TEXT_INSET * 2;
 const bioTextX = bioX - bioW / 2 + BIO_TEXT_INSET;
 const bioImageH = 160; // full-width image strip on top (larger container, no white borders)
@@ -264,8 +264,8 @@ function curve(x1: number, y1: number, x2: number, y2: number, strength = 0.5) {
         return (
           <path
             class={`conn conn-sis-cs conn-cs-${s.slug}`}
-            data-cs={s.slug}
-            data-sis={inv.slug}
+            data-from={`sis:${inv.slug}`}
+            data-to={`cs:${s.slug}`}
             d={curve(sisX, inv.y, csX + csW, s.y)}
             fill="none"
             stroke={s.color}
@@ -283,7 +283,8 @@ function curve(x1: number, y1: number, x2: number, y2: number, strength = 0.5) {
       return (
         <path
           class={`conn conn-cs-bio conn-cs-${s.slug}`}
-          data-cs={s.slug}
+          data-from={`cs:${s.slug}`}
+          data-to="bio"
           d={curve(csX, s.y, bioX + bioW / 2, bioBoxY)}
           fill="none"
           stroke={s.color}
@@ -294,66 +295,68 @@ function curve(x1: number, y1: number, x2: number, y2: number, strength = 0.5) {
     })}
 
     {/* Bioregion card: image strip on top, text below */}
-    <rect
-      x={bioX - bioW / 2}
-      y={bioTop}
-      width={bioW}
-      height={bioH}
-      rx="18"
-      fill="var(--paper-raised)"
-      stroke="var(--bwl-primary)"
-      stroke-width="2"
-      filter="url(#softShadow)"
-    />
-    {bioImageSrc && (
-      <image
+    <g class="card bio-card" data-el="bio" tabindex="0">
+      <rect
         x={bioX - bioW / 2}
         y={bioTop}
         width={bioW}
-        height={bioImageH}
-        href={bioImageSrc}
-        clip-path="inset(0px round 18px 18px 0 0)"
-        preserveAspectRatio="xMidYMid slice"
+        height={bioH}
+        rx="18"
+        fill="var(--paper-raised)"
+        stroke="var(--bwl-primary)"
+        stroke-width="2"
+        filter="url(#softShadow)"
       />
-    )}
-    {/* Redraw the card border over the image edge */}
-    <rect
-      x={bioX - bioW / 2}
-      y={bioTop}
-      width={bioW}
-      height={bioH}
-      rx="18"
-      fill="none"
-      stroke="var(--bwl-primary)"
-      stroke-width="2"
-    />
+      {bioImageSrc && (
+        <image
+          x={bioX - bioW / 2}
+          y={bioTop}
+          width={bioW}
+          height={bioImageH}
+          href={bioImageSrc}
+          clip-path="inset(0px round 18px 18px 0 0)"
+          preserveAspectRatio="xMidYMid slice"
+        />
+      )}
+      {/* Redraw the card border over the image edge */}
+      <rect
+        x={bioX - bioW / 2}
+        y={bioTop}
+        width={bioW}
+        height={bioH}
+        rx="18"
+        fill="none"
+        stroke="var(--bwl-primary)"
+        stroke-width="2"
+      />
 
-    <SVGTextBlock
-      lines={bioNameLines}
-      x={bioTextX}
-      y={bioNameStartY}
-      lineHeight="1.2em"
-      anchor="start"
-      style={`font-family:var(--font-display);font-size:${bioNameFont}px;font-weight:bold;fill:var(--bwl-primary);`}
-    />
-    {bioCountryLines.length > 0 && (
       <SVGTextBlock
-        lines={bioCountryLines}
+        lines={bioNameLines}
         x={bioTextX}
-        y={bioCountryStartY}
+        y={bioNameStartY}
         lineHeight="1.2em"
         anchor="start"
-        style={`font-family:var(--font-display);font-size:${bioCountryFont}px;font-weight:bold;fill:var(--bwl-secondary);letter-spacing:0.1em;text-transform:uppercase;`}
+        style={`font-family:var(--font-display);font-size:${bioNameFont}px;font-weight:bold;fill:var(--bwl-primary);`}
       />
-    )}
-    <SVGTextBlock
-      lines={bioDescLines}
-      x={bioTextX}
-      y={bioDescStartY}
-      lineHeight="1.3em"
-      anchor="start"
-      style={`font-family:var(--font-body);font-size:${bioDescFont}px;fill:var(--bwl-text);opacity:0.85;`}
-    />
+      {bioCountryLines.length > 0 && (
+        <SVGTextBlock
+          lines={bioCountryLines}
+          x={bioTextX}
+          y={bioCountryStartY}
+          lineHeight="1.2em"
+          anchor="start"
+          style={`font-family:var(--font-display);font-size:${bioCountryFont}px;font-weight:bold;fill:var(--bwl-secondary);letter-spacing:0.1em;text-transform:uppercase;`}
+        />
+      )}
+      <SVGTextBlock
+        lines={bioDescLines}
+        x={bioTextX}
+        y={bioDescStartY}
+        lineHeight="1.3em"
+        anchor="start"
+        style={`font-family:var(--font-body);font-size:${bioDescFont}px;fill:var(--bwl-text);opacity:0.85;`}
+      />
+    </g>
 
     {/* Critical Shifts */}
     {shiftPositions.map((s) => {
@@ -362,7 +365,7 @@ function curve(x1: number, y1: number, x2: number, y2: number, strength = 0.5) {
       const nameY = cardTop + CS_TEXT_TOP + csNameLineHeight * 0.8;
       const leverageY = nameY + s.nameLines.length * csNameLineHeight + 4;
       return (
-        <g class={`card cs-card cs-${s.slug}`} data-cs={s.slug} tabindex="0">
+        <g class={`card cs-card cs-${s.slug}`} data-el={`cs:${s.slug}`} tabindex="0">
           <rect
             x={csX}
             y={s.y - s.cardHeight / 2}
@@ -402,8 +405,7 @@ function curve(x1: number, y1: number, x2: number, y2: number, strength = 0.5) {
       return (
         <g
           class={`card sis-card sis-${inv.slug}`}
-          data-sis={inv.slug}
-          data-cs={inv.tags.join(" ")}
+          data-el={`sis:${inv.slug}`}
           tabindex="0"
         >
           <rect
@@ -483,12 +485,31 @@ function curve(x1: number, y1: number, x2: number, y2: number, strength = 0.5) {
     const svg = document.querySelector<SVGSVGElement>(".flow-wrap svg");
     if (!svg) return;
 
-    function activate(csSlug: string) {
+    /**
+     * Highlight one card plus everything directly connected to it (one hop):
+     * a connector is active when BOTH its endpoints are highlighted, so
+     * hovering any card lights up exactly its own connections and the cards
+     * at the far end of each.
+     */
+    function activateEl(elId: string) {
       svg!.classList.add("has-active");
+      const match = new Set([elId]);
+      svg!.querySelectorAll<SVGPathElement>(".conn").forEach((path) => {
+        const from = path.dataset.from;
+        const to = path.dataset.to;
+        if (from === elId || to === elId) {
+          if (from) match.add(from);
+          if (to) match.add(to);
+        }
+      });
       svg!.querySelectorAll<SVGElement>(".card, .conn").forEach((el) => {
-        const cs = el.dataset.cs;
-        const match = cs === csSlug || (cs && cs.split(" ").includes(csSlug));
-        el.classList.toggle("active", match);
+        if (el.classList.contains("conn")) {
+          const from = el.dataset.from;
+          const to = el.dataset.to;
+          el.classList.toggle("active", !!from && !!to && match.has(from) && match.has(to));
+        } else {
+          el.classList.toggle("active", !!el.dataset.el && match.has(el.dataset.el));
+        }
       });
     }
 
@@ -497,17 +518,30 @@ function curve(x1: number, y1: number, x2: number, y2: number, strength = 0.5) {
       svg!.querySelectorAll<SVGElement>(".active").forEach((el) => el.classList.remove("active"));
     }
 
-    svg.querySelectorAll<SVGGElement>(".cs-card").forEach((g) => {
-      g.addEventListener("mouseenter", () => activate(g.dataset.cs!));
+    svg.querySelectorAll<SVGGElement>(".cs-card, .sis-card, .bio-card").forEach((g) => {
+      g.addEventListener("mouseenter", () => activateEl(g.dataset.el!));
       g.addEventListener("mouseleave", deactivate);
-      g.addEventListener("focus", () => activate(g.dataset.cs!));
+      g.addEventListener("focus", () => activateEl(g.dataset.el!));
       g.addEventListener("blur", deactivate);
     });
 
     svg.querySelectorAll<SVGPathElement>(".conn").forEach((path) => {
-      path.addEventListener("mouseenter", () => activate(path.dataset.cs!));
+      path.addEventListener("mouseenter", () => activateEl(path.dataset.from!));
       path.addEventListener("mouseleave", deactivate);
     });
+
+    // On long pages the diagram is taller than the viewport: open with the
+    // bioregion card vertically centred, so the top/bottom systemic
+    // innovations are reachable by scrolling up/down.
+    function centerOnBio() {
+      const bio = svg!.querySelector<SVGGElement>(".bio-card");
+      if (!bio) return;
+      const r = bio.getBoundingClientRect();
+      const y = window.scrollY + r.top - (window.innerHeight - r.height) / 2;
+      window.scrollTo(0, Math.max(0, y));
+    }
+    if (document.readyState === "complete") requestAnimationFrame(centerOnBio);
+    else window.addEventListener("load", () => requestAnimationFrame(centerOnBio));
   })();
 </script>
 
