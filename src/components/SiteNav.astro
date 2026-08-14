@@ -1,19 +1,16 @@
 ---
 interface Props {
-  current: "map" | "shifts" | "list";
-  /** fixed = floating pill (top-right of other pages); inline = segmented control (landing side panel) */
-  variant?: "fixed" | "inline";
+  current: "map" | "shifts";
 }
-const { current, variant = "fixed" } = Astro.props;
+const { current } = Astro.props;
 const base = import.meta.env.BASE_URL.endsWith("/") ? import.meta.env.BASE_URL : import.meta.env.BASE_URL + "/";
 const links = [
-  { id: "map", label: "Map", href: `${base}` },
+  { id: "map", label: "Bioregions", href: `${base}` },
   { id: "shifts", label: "Critical shifts", href: `${base}critical-shifts/` },
-  { id: "list", label: "List view", href: `${base}list/` },
 ] as const;
 ---
 
-<nav class={`site-nav ${variant}`} aria-label="Views">
+<nav class="site-nav" aria-label="Views">
   {links.map((l) => (
     <a class={l.id === current ? "active" : ""} href={l.href}>{l.label}</a>
   ))}
@@ -21,10 +18,19 @@ const links = [
 
 <style>
   .site-nav {
+    position: fixed;
+    top: 14px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 100;
     display: flex;
     gap: 4px;
     padding: 4px;
     border-radius: 999px;
+    background: rgba(249, 249, 243, 0.92);
+    border: 1px solid rgba(32, 64, 79, 0.18);
+    box-shadow: 0 4px 14px rgba(32, 64, 79, 0.14);
+    backdrop-filter: blur(6px);
     font-family: var(--font-body);
   }
   .site-nav a {
@@ -34,7 +40,7 @@ const links = [
     text-transform: uppercase;
     text-decoration: none;
     color: var(--ink-strong);
-    padding: 6px 12px;
+    padding: 7px 14px;
     border-radius: 999px;
     transition: background 0.15s ease, color 0.15s ease;
   }
@@ -42,29 +48,5 @@ const links = [
   .site-nav a.active {
     background: var(--bwl-primary);
     color: #fff;
-  }
-
-  /* floating pill — other pages */
-  .site-nav.fixed {
-    position: fixed;
-    top: 14px;
-    right: 16px;
-    z-index: 100;
-    background: rgba(249, 249, 243, 0.92);
-    border: 1px solid rgba(32, 64, 79, 0.18);
-    box-shadow: 0 4px 14px rgba(32, 64, 79, 0.14);
-    backdrop-filter: blur(6px);
-  }
-
-  /* segmented control — landing side panel header */
-  .site-nav.inline {
-    width: 100%;
-    background: rgba(32, 64, 79, 0.06);
-    border: 1px solid rgba(32, 64, 79, 0.14);
-  }
-  .site-nav.inline a {
-    flex: 1 1 0;
-    text-align: center;
-    white-space: nowrap;
   }
 </style>

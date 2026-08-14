@@ -1,0 +1,419 @@
+---
+/**
+ * Vertical flow diagram — TEST layout for bioregions with many systemic
+ * innovations (e.g. Vistula). Instead of three side-by-side columns, the
+ * diagram stacks vertically:
+ *
+ *   bioregion card (image on the LEFT of the card)   ← top
+ *   critical shifts (horizontal row)                  ← middle
+ *   systemic innovations (horizontal rows, image on  ← bottom
+ *   TOP of each card, wrapping when they overflow)
+ *
+ * Connectors + hover highlighting behave like the horizontal FlowDiagram.
+ */
+import SVGTextBlock from "./SVGTextBlock.astro";
+import { notionImageUrl } from "../lib/images";
+import { wrapToWidth, capLines } from "../lib/text";
+
+interface Shift {
+  slug: string;
+  name: string;
+  emoji: string | null;
+  leveragePoint: string;
+}
+
+interface Innovation {
+  slug: string;
+  name: string;
+  description: string;
+  tags: string[];
+  notionUrl: string | null;
+  imageUrl: string | null;
+  imageFile: string | null;
+}
+
+interface Props {
+  shifts: Shift[];
+  innovations: Innovation[];
+  bioregionName: string;
+  bioregionDescription: string;
+  bioregionImageUrl?: string | null;
+  bioregionImageFile?: string | null;
+  bioregionCountry?: string | null;
+}
+
+const {
+  shifts,
+  innovations,
+  bioregionName,
+  bioregionDescription,
+  bioregionImageUrl = null,
+  bioregionImageFile = null,
+  bioregionCountry = "",
+} = Astro.props as Props;
+
+const base = import.meta.env.BASE_URL.endsWith("/") ? import.meta.env.BASE_URL : import.meta.env.BASE_URL + "/";
+function withBase(path: string | null): string | null {
+  if (!path) return null;
+  if (/^(https?:|data:)/i.test(path)) return path;
+  if (base && base !== "/") return `${base}${path}`;
+  return path;
+}
+
+function resolveImageSource(file: string | null | undefined, url: string | null | undefined): string | null {
+  const local = notionImageUrl(file);
+  if (local) return local;
+  return withBase(url || null);
+}
+
+const PALETTE = [
+  "#20404F", "#E2AD4F", "#5C8A7A", "#C78A1D",
+  "#4A7C6F", "#8B5A2B", "#3D6B66", "#D4A84B",
+];
+
+// --- canvas ---
+const W = 1500;
+const margin = { top: 90, right: 70, bottom: 70, left: 70 };
+
+// --- bioregion card (top, image on the left) ---
+const bioW = 600;
+const bioImg = 180;
+const bioX = W / 2;
+const bioLeft = bioX - bioW / 2;
+const bioTop = margin.top;
+const bioTextX = bioLeft + bioImg + 26;
+const bioTextW = bioW - bioImg - 26 - 24;
+const bioImageSrc = resolveImageSource(bioregionImageFile, bioregionImageUrl);
+
+const bioNameLines = capLines(wrapToWidth(bioregionName || "", bioTextW, 20, "display"), 2);
+const bioCountryLines = capLines(wrapToWidth(bioregionCountry || "", bioTextW, 10, "display"), 1);
+const bioDescLines = capLines(wrapToWidth(bioregionDescription || "", bioTextW, 9.5, "body"), 6);
+const bioTextHeight =
+  bioNameLines.length * 24 +
+  (bioCountryLines.length ? 6 + bioCountryLines.length * 12 : 0) +
+  (bioDescLines.length ? 8 + bioDescLines.length * 12.5 : 0);
+const bioH = Math.max(180, bioImg);
+const bioBottom = bioTop + bioH;
+const bioTextTop = bioTop + (bioH - bioTextHeight) / 2;
+const bioNameY = bioTextTop + 24 * 0.8;
+const bioCountryY = bioNameY + bioNameLines.length * 24 + 6;
+const bioDescY = bioCountryY + bioCountryLines.length * 12 + 8;
+
+// --- critical shifts (horizontal row, centred) ---
+const csW = 220;
+const csGap = 26;
+const csCards = shifts.map((s, i) => {
+  const nameLines = capLines(wrapToWidth(`${s.emoji || ""} ${s.name}`.trim(), csW - 40, 12, "display"), 2);
+  const leverageLines = capLines(wrapToWidth(s.leveragePoint || "", csW - 40, 9.5, "body"), 3);
+  const textHeight = nameLines.length * 14 + 4 + leverageLines.length * 12;
+  const cardHeight = Math.max(96, textHeight + 30);
+  return { ...s, nameLines, leverageLines, cardHeight, color: PALETTE[i % PALETTE.length] };
+});
+const csRowWidth = csCards.reduce((s, c, i) => s + c.cardHeight * 0 + (i < csCards.length - 1 ? csGap : 0), 0) + csCards.reduce((s, c) => s + csW, 0);
+const csStartX = (W - csRowWidth) / 2;
+const csTop = bioBottom + 110;
+const csBottom = csTop + Math.max(...csCards.map((c) => c.cardHeight));
+let csCursorX = csStartX;
+const csPositions = csCards.map((c) => {
+  const x = csCursorX + csW / 2;
+  csCursorX += csW + csGap;
+  return x;
+});
+
+// --- systemic innovations (horizontal rows, image on top, wrapping) ---
+const sisW = 250;
+const sisImgH = 120;
+const sisGap = 24;
+const sisCards = innovations.map((inv) => {
+  const hasImage = !!resolveImageSource(inv.imageFile, inv.imageUrl);
+  const nameLines = capLines(wrapToWidth(inv.name || "", sisW - 24, 12, "display"), 2);
+  const descLines = capLines(wrapToWidth(inv.description || "", sisW - 24, 9.5, "body"), 3);
+  return { ...inv, hasImage, nameLines, descLines };
+});
+const sisCardH = 216;
+let sisCursorX = margin.left;
+let sisCursorY = csBottom + 110;
+const sisPositions = sisCards.map((c) => {
+  if (sisCursorX + sisW > W - margin.right) {
+    sisCursorX = margin.left;
+    sisCursorY += sisCardH + sisGap;
+  }
+  const pos = { x: sisCursorX, y: sisCursorY };
+  sisCursorX += sisW + sisGap;
+  return pos;
+});
+const sisBottom = sisCursorY + sisCardH;
+const height = sisBottom + margin.bottom;
+
+const csBySlug = new Map(csCards.map((c) => [c.slug, c]));
+
+function curve(x1: number, y1: number, x2: number, y2: number, strength = 0.5) {
+  const dx = x2 - x1;
+  const mx = x1 + dx * strength;
+  return `M${x1},${y1} C${mx},${y1} ${mx},${y2} ${x2},${y2}`;
+}
+---
+
+<div class="flow-wrap">
+  <svg
+    width={W}
+    height="auto"
+    viewBox={`0 0 ${W} ${height}`}
+    preserveAspectRatio="xMidYMid meet"
+    role="img"
+    xmlns="http://www.w3.org/2000/svg"
+  >
+    <title>Vertical layout test — {bioregionName}</title>
+    <desc>
+      {bioregionName} on top, its critical shifts below, then the systemic innovations in horizontal rows.
+    </desc>
+
+    <defs>
+      <filter id="softShadow" x="-20%" y="-20%" width="140%" height="140%">
+        <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#20404f" flood-opacity="0.08" />
+      </filter>
+    </defs>
+
+    {/* Bioregion → critical shift lines */}
+    {csPositions.map((x, i) => (
+      <path
+        class="conn conn-bio-cs"
+        data-from="bio"
+        data-to={`cs:${csCards[i].slug}`}
+        d={curve(bioX, bioBottom, x, csTop)}
+        fill="none"
+        stroke={csCards[i].color}
+        stroke-width="3"
+        opacity="0.5"
+      />
+    ))}
+
+    {/* Critical shift → its systemic innovations */}
+    {sisCards.map((inv, j) => {
+      const cs = csBySlug.get(inv.tags[0]);
+      if (!cs) return null;
+      const csIdx = csCards.findIndex((c) => c.slug === cs.slug);
+      return (
+        <path
+          class="conn conn-cs-sis"
+          data-from={`cs:${cs.slug}`}
+          data-to={`sis:${inv.slug}`}
+          d={curve(csPositions[csIdx], csBottom, sisPositions[j].x + sisW / 2, sisPositions[j].y)}
+          fill="none"
+          stroke={cs.color}
+          stroke-width="2.5"
+          opacity="0.45"
+        />
+      );
+    })}
+
+    {/* Bioregion card */}
+    <g class="card bio-card" data-el="bio" data-root="bio" tabindex="0">
+      <rect x={bioLeft} y={bioTop} width={bioW} height={bioH} rx="18" fill="var(--paper-raised)" stroke="var(--bwl-primary)" stroke-width="2" filter="url(#softShadow)" />
+      {bioImageSrc && (
+        <image
+          x={bioLeft}
+          y={bioTop}
+          width={bioImg}
+          height={bioH}
+          href={bioImageSrc}
+          clip-path="inset(0px round 18px 0 0 18px)"
+          preserveAspectRatio="xMidYMid slice"
+        />
+      )}
+      <rect x={bioLeft} y={bioTop} width={bioW} height={bioH} rx="18" fill="none" stroke="var(--bwl-primary)" stroke-width="2" />
+      <SVGTextBlock
+        lines={bioNameLines}
+        x={bioTextX}
+        y={bioNameY}
+        lineHeight="1.2em"
+        anchor="start"
+        style="font-family:var(--font-display);font-size:20px;font-weight:bold;fill:var(--bwl-primary);"
+      />
+      {bioCountryLines.length > 0 && (
+        <SVGTextBlock
+          lines={bioCountryLines}
+          x={bioTextX}
+          y={bioCountryY}
+          lineHeight="1.2em"
+          anchor="start"
+          style="font-family:var(--font-display);font-size:10px;font-weight:bold;fill:var(--bwl-secondary);letter-spacing:0.1em;text-transform:uppercase;"
+        />
+      )}
+      <SVGTextBlock
+        lines={bioDescLines}
+        x={bioTextX}
+        y={bioDescY}
+        lineHeight="1.3em"
+        anchor="start"
+        style="font-family:var(--font-body);font-size:9.5px;fill:var(--bwl-text);opacity:0.85;"
+      />
+    </g>
+
+    {/* Critical shift cards */}
+    {csCards.map((s, i) => {
+      const cardTop = csTop;
+      const nameY = cardTop + 16 + 14 * 0.8;
+      const leverageY = nameY + s.nameLines.length * 14 + 4;
+      return (
+        <g class={`card cs-card cs-${s.slug}`} data-el={`cs:${s.slug}`} tabindex="0">
+          <rect x={csPositions[i] - csW / 2} y={cardTop} width={csW} height={s.cardHeight} rx="12" fill="var(--paper-raised)" stroke={s.color} stroke-width="2" filter="url(#softShadow)" />
+          <SVGTextBlock
+            lines={s.nameLines}
+            x={csPositions[i] - csW / 2 + 20}
+            y={nameY}
+            lineHeight="1.2em"
+            style="font-family:var(--font-display);font-size:12px;font-weight:bold;fill:var(--bwl-primary);"
+          />
+          <SVGTextBlock
+            lines={s.leverageLines}
+            x={csPositions[i] - csW / 2 + 20}
+            y={leverageY}
+            lineHeight="1.3em"
+            style="font-family:var(--font-body);font-size:9.5px;fill:var(--bwl-text);opacity:0.85;"
+          />
+        </g>
+      );
+    })}
+
+    {/* Systemic innovation cards (image on top) */}
+    {sisCards.map((inv, j) => {
+      const { x, y } = sisPositions[j];
+      const sisImageSrc = resolveImageSource(inv.imageFile, inv.imageUrl);
+      const nameY = y + sisImgH + 12 + 14 * 0.8;
+      const descY = nameY + inv.nameLines.length * 14 + 4;
+      return (
+        <g class="card sis-card" data-el={`sis:${inv.slug}`} tabindex="0">
+          <rect x={x} y={y} width={sisW} height={sisCardH} rx="12" fill="#ffffff" stroke="var(--line-strong)" stroke-width="1.5" filter="url(#softShadow)" />
+          {sisImageSrc && (
+            <image
+              x={x}
+              y={y}
+              width={sisW}
+              height={sisImgH}
+              href={sisImageSrc}
+              clip-path="inset(0px round 12px 12px 0 0)"
+              preserveAspectRatio="xMidYMid slice"
+            />
+          )}
+          <rect x={x} y={y} width={sisW} height={sisCardH} rx="12" fill="none" stroke="var(--line-strong)" stroke-width="1.5" />
+          <SVGTextBlock
+            lines={inv.nameLines}
+            x={x + 12}
+            y={nameY}
+            lineHeight="1.15em"
+            anchor="start"
+            style="font-family:var(--font-display);font-size:12px;font-weight:bold;fill:var(--bwl-primary);"
+          />
+          <SVGTextBlock
+            lines={inv.descLines}
+            x={x + 12}
+            y={descY}
+            lineHeight="1.3em"
+            anchor="start"
+            style="font-family:var(--font-body);font-size:9.5px;fill:var(--bwl-text);opacity:0.85;"
+          />
+          {inv.notionUrl && (
+            <a href={inv.notionUrl} target="_blank" rel="noopener">
+              <g>
+                <circle cx={x + sisW - 15} cy={y + 22} r="8" fill="var(--bwl-secondary)" opacity="0.15" />
+                <text x={x + sisW - 15} y={y + 25} text-anchor="middle" font-size="10" fill="var(--bwl-primary)" font-family="var(--font-body)" font-weight="bold">↗</text>
+              </g>
+            </a>
+          )}
+        </g>
+      );
+    })}
+  </svg>
+</div>
+
+<script>
+  (function () {
+    const svg = document.querySelector<SVGSVGElement>(".flow-wrap svg");
+    if (!svg) return;
+
+    function activateEl(elId: string) {
+      svg!.classList.add("has-active");
+      const match = new Set([elId]);
+      svg!.querySelectorAll<SVGPathElement>(".conn").forEach((path) => {
+        const from = path.dataset.from;
+        const to = path.dataset.to;
+        if (from === elId || to === elId) {
+          if (from) match.add(from);
+          if (to) match.add(to);
+        }
+      });
+      if (elId.startsWith("sis:")) {
+        const root = svg!.querySelector<SVGElement>("[data-root]");
+        if (root?.dataset.el) match.add(root.dataset.el);
+      }
+      svg!.querySelectorAll<SVGElement>(".card, .conn").forEach((el) => {
+        if (el.classList.contains("conn")) {
+          const from = el.dataset.from;
+          const to = el.dataset.to;
+          el.classList.toggle("active", !!from && !!to && match.has(from) && match.has(to));
+        } else {
+          el.classList.toggle("active", !!el.dataset.el && match.has(el.dataset.el));
+        }
+      });
+    }
+
+    function deactivate() {
+      svg!.classList.remove("has-active");
+      svg!.querySelectorAll<SVGElement>(".active").forEach((el) => el.classList.remove("active"));
+    }
+
+    svg.querySelectorAll<SVGGElement>(".bio-card, .cs-card, .sis-card").forEach((g) => {
+      g.addEventListener("mouseenter", () => activateEl(g.dataset.el!));
+      g.addEventListener("mouseleave", deactivate);
+      g.addEventListener("focus", () => activateEl(g.dataset.el!));
+      g.addEventListener("blur", deactivate);
+    });
+
+    svg.querySelectorAll<SVGPathElement>(".conn").forEach((path) => {
+      path.addEventListener("mouseenter", () => activateEl(path.dataset.from!));
+      path.addEventListener("mouseleave", deactivate);
+    });
+  })();
+</script>
+
+<style>
+  .flow-wrap {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .flow-wrap svg {
+    display: block;
+    width: auto;
+    height: auto;
+    margin: 0 auto;
+    background: var(--paper);
+  }
+
+  .flow-wrap svg .conn {
+    transition: opacity 0.25s ease, stroke-width 0.25s ease;
+    cursor: pointer;
+  }
+  .flow-wrap svg .card {
+    transition: opacity 0.25s ease;
+  }
+  .flow-wrap svg .card:focus {
+    outline: none;
+  }
+
+  .flow-wrap svg.has-active .conn:not(.active) {
+    opacity: 0.08 !important;
+  }
+  .flow-wrap svg.has-active .card:not(.active) {
+    opacity: 0.25;
+  }
+
+  .flow-wrap svg.has-active .conn.active {
+    opacity: 0.95 !important;
+    stroke-width: 4px;
+  }
+  .flow-wrap svg.has-active .card.active {
+    opacity: 1;
+  }
+</style>

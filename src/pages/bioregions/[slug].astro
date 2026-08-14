@@ -1,6 +1,7 @@
 ---
 import { getCollection } from "astro:content";
 import BaseLayout from "../../layouts/BaseLayout.astro";
+import SiteNav from "../../components/SiteNav.astro";
 import FlowDiagram from "../../components/FlowDiagram.astro";
 
 export async function getStaticPaths() {
@@ -20,6 +21,7 @@ const base = import.meta.env.BASE_URL.endsWith("/") ? import.meta.env.BASE_URL :
 ---
 
 <BaseLayout title={`${data.name} — BWL portfolio`}>
+  <SiteNav current="map" />
   <a class="back-link" href={base} aria-label="Back to the map">← Map</a>
   <FlowDiagram
     bioregionName={data.name}

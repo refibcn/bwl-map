@@ -2,37 +2,36 @@
 import { getCollection } from "astro:content";
 import BaseLayout from "../../layouts/BaseLayout.astro";
 import SiteNav from "../../components/SiteNav.astro";
-import ShiftDiagram from "../../components/ShiftDiagram.astro";
-import { buildShiftPages } from "../../lib/shift-pages";
+import VerticalFlow from "../../components/VerticalFlow.astro";
 
-export async function getStaticPaths() {
-  const [bioEntries, shiftEntries] = await Promise.all([
-    getCollection("bioregions"),
-    getCollection("shifts"),
-  ]);
-  const shifts = buildShiftPages(
-    bioEntries.map((b) => b.data),
-    shiftEntries.map((s) => s.data)
-  );
-  return shifts.map((s) => ({
-    params: { slug: s.slug },
-    props: { shift: s },
-  }));
-}
+const all = await getCollection("bioregions");
+const vistula =
+  all.find((b) => b.data.slug === "vistula-pl") ||
+  all.find((b) => b.data.name.toLowerCase().includes("vistula"));
 
-const { shift } = Astro.props as any;
 const base = import.meta.env.BASE_URL.endsWith("/") ? import.meta.env.BASE_URL : import.meta.env.BASE_URL + "/";
+const data = vistula?.data;
 ---
 
-<BaseLayout title={`${shift.name} — Critical shift`}>
-  <SiteNav current="shifts" />
-  <a class="back-link" href={`${base}critical-shifts/`} aria-label="Back to all critical shifts">← Critical shifts</a>
-  <ShiftDiagram shift={shift} bioregions={shift.bioregions} innovations={shift.innovations} />
-  {shift.bioregions.length === 0 && (
-    <p class="empty-note">
-      No published systemic innovations for this critical shift yet — the page will fill in as bioregions link their work.
-    </p>
+<BaseLayout title="Vistula — vertical layout test">
+  <SiteNav current="map" />
+  <a class="back-link" href={base} aria-label="Back to the map">← Map</a>
+  {data ? (
+    <VerticalFlow
+      bioregionName={data.name}
+      bioregionDescription={data.shortNarrative || data.intro}
+      bioregionCountry={data.country}
+      bioregionImageUrl={data.imageUrl}
+      bioregionImageFile={data.imageFile}
+      shifts={data.criticalShifts}
+      innovations={data.systemicInnovations}
+    />
+  ) : (
+    <p class="test-note">Vistula bioregion not found in the current data.</p>
   )}
+  <p class="test-note">
+    Test layout — vertical: bioregion on top (image left), critical shifts below, innovations in horizontal rows (image on top).
+  </p>
 </BaseLayout>
 
 <style>
@@ -61,13 +60,13 @@ const base = import.meta.env.BASE_URL.endsWith("/") ? import.meta.env.BASE_URL :
     color: #fff;
     border-color: var(--bwl-primary);
   }
-  .empty-note {
+  .test-note {
     max-width: 1080px;
-    margin: 2rem auto 0;
+    margin: 1.5rem auto 0;
     padding: 0 1.5rem;
     text-align: center;
     color: var(--mist);
     font-family: var(--font-body);
-    font-size: 14px;
+    font-size: 13px;
   }
 </style>

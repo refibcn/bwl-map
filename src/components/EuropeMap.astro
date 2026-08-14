@@ -12,7 +12,6 @@
  */
 import europeMap from "../data/europe-map.json";
 import { notionImageUrl } from "../lib/images";
-import SiteNav from "./SiteNav.astro";
 import type { MapRegion } from "../lib/map-regions";
 
 interface Props {
@@ -59,13 +58,12 @@ const paths = [...new Set(europeMap.countries.flatMap((c) => c.d))];
                 style={`--x:${r.x.toFixed(3)}%;--y:${r.y.toFixed(3)}%;--i:${i};--ring:${r.ring}`}
                 aria-label={r.name}
               >
-                <span class="bwc-dot"></span>
+                {img ? (
+                  <span class="bwc-ring-img"><img src={img} alt="" loading="lazy" /></span>
+                ) : (
+                  <span class="bwc-dot"></span>
+                )}
                 <span class="bwc-label">{r.name}</span>
-                <span class="bwc-card">
-                  <span class="bwc-ring">{img && <img src={img} alt="" loading="lazy" />}</span>
-                  <span class="bwc-card-title">{r.name}</span>
-                  <span class="bwc-card-desc">{r.desc}</span>
-                </span>
               </a>
             );
           })}
@@ -83,7 +81,6 @@ const paths = [...new Set(europeMap.countries.flatMap((c) => c.d))];
 
     <aside class="bio-panel">
       <button class="bio-close" type="button" aria-label="Hide the bioregions panel">✕</button>
-      <SiteNav current="map" variant="inline" />
       <p class="bio-eyebrow">Bioregional Weaving Labs</p>
       <h2 class="bio-title">Bioregions</h2>
       <div class="bio-list-wrap">
@@ -201,22 +198,22 @@ const paths = [...new Set(europeMap.countries.flatMap((c) => c.d))];
   /* -------- side panel -------- */
   .bio-panel {
     flex: 1 1 0;
+    min-width: 300px;
     max-width: 400px;
-    min-width: 0;
     position: relative;
     display: flex;
     flex-direction: column;
     background: var(--bwc-card-bg);
     border: 1px solid rgba(32, 64, 79, 0.18);
     border-radius: 18px;
-    padding: 14px 18px 18px;
+    padding: 16px 24px 24px;
     box-shadow: 0 18px 40px var(--bwc-shadow);
   }
   .bio-close {
     align-self: flex-end;
     width: 26px;
     height: 26px;
-    margin-bottom: 10px;
+    margin-bottom: 14px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -241,15 +238,15 @@ const paths = [...new Set(europeMap.countries.flatMap((c) => c.d))];
     text-transform: uppercase;
     letter-spacing: 0.1em;
     color: #6d7a6b;
-    margin-top: 16px;
-    margin-bottom: 6px;
+    margin-top: 6px;
+    margin-bottom: 8px;
   }
   .bio-title {
     font-family: var(--bwc-font-head);
     font-weight: normal;
     font-size: 26px;
     color: var(--bwc-title);
-    margin-bottom: 14px;
+    margin-bottom: 18px;
   }
 
   /* the list sits in its own inset container, embedded in the column */
@@ -257,12 +254,12 @@ const paths = [...new Set(europeMap.countries.flatMap((c) => c.d))];
     background: rgba(32, 64, 79, 0.05);
     border: 1px solid rgba(32, 64, 79, 0.08);
     border-radius: 14px;
-    padding: 8px;
+    padding: 10px;
   }
   .bio-list {
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 9px;
     overflow-y: auto;
   }
   .bio-row {
@@ -270,8 +267,8 @@ const paths = [...new Set(europeMap.countries.flatMap((c) => c.d))];
     justify-content: space-between;
     align-items: center;
     gap: 10px;
-    min-height: 46px;
-    padding: 9px 13px;
+    min-height: 48px;
+    padding: 10px 14px;
     background: #fffff0;
     border: 1px solid rgba(32, 64, 79, 0.12);
     border-radius: 10px;
@@ -355,7 +352,30 @@ const paths = [...new Set(europeMap.countries.flatMap((c) => c.d))];
   .bwc-marker:hover,
   .bwc-marker:focus-within { z-index: 60; }
 
-  /* the single marker dot (solid circle in the region colour) */
+  /* the marker: the bioregion's photo in a ringed circle (or a plain dot
+     when no image is available). Hovering only animates it — no pop-up. */
+  .bwc-ring-img {
+    position: absolute;
+    inset: 10%;
+    border-radius: 50%;
+    overflow: hidden;
+    box-shadow:
+      0 0 0 3px rgba(255, 255, 255, 0.9),
+      0 0 0 6px var(--ring, #c9762b),
+      0 3px 10px rgba(32, 64, 79, 0.4);
+    transition: transform 0.25s ease;
+  }
+  .bwc-ring-img img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+  .bwc-marker:hover .bwc-ring-img,
+  .bwc-marker:focus-visible .bwc-ring-img {
+    transform: scale(1.15);
+  }
+
   .bwc-dot {
     position: absolute;
     inset: 16%;
@@ -399,125 +419,38 @@ const paths = [...new Set(europeMap.countries.flatMap((c) => c.d))];
     transform: translateX(-50%) translateY(1px);
   }
 
-  /* -------- hover card -------- */
-  .bwc-card {
-    position: absolute;
-    bottom: calc(100% + 12px);
-    left: 50%;
-    transform: translate(-50%, 8px) scale(0.92);
-    width: 210px;
-    background: var(--bwc-card-bg);
-    border-radius: 14px;
-    padding: 18px 16px 16px;
-    text-align: center;
-    box-shadow: 0 18px 40px var(--bwc-shadow);
-    opacity: 0;
-    visibility: hidden;
-    pointer-events: none;
-    transition: opacity 0.3s ease, transform 0.35s cubic-bezier(0.2, 0.9, 0.3, 1.2), visibility 0.3s;
-    z-index: 5;
-  }
-  .bwc-card::after {
-    content: "";
-    position: absolute;
-    top: 100%;
-    left: 50%;
-    transform: translateX(-50%);
-    border: 9px solid transparent;
-    border-top-color: var(--bwc-card-bg);
-  }
-  .bwc-marker:hover .bwc-card,
-  .bwc-marker:focus-visible .bwc-card {
-    opacity: 1;
-    visibility: visible;
-    pointer-events: auto;
-    transform: translate(-50%, 0) scale(1);
-  }
-
-  .bwc-ring {
-    position: relative;
-    width: 108px;
-    height: 108px;
-    margin: 0 auto 12px;
-    border-radius: 50%;
-    display: block;
-  }
-  .bwc-ring img {
-    position: relative;
-    z-index: 2;
-    width: 100%;
-    height: 100%;
-    border-radius: 50%;
-    object-fit: cover;
-    display: block;
-    box-shadow:
-      0 0 0 4px var(--bwc-card-bg),
-      0 0 0 7px var(--ring, #c9762b),
-      0 0 0 12px var(--bwc-card-bg),
-      0 0 0 14px color-mix(in srgb, var(--ring, #c9762b) 45%, transparent);
-  }
-  .bwc-ring::before {
-    content: "";
-    position: absolute;
-    inset: -6px;
-    border-radius: 50%;
-    border: 2px solid var(--ring, #c9762b);
-    opacity: 0;
-  }
-  .bwc-marker:hover .bwc-ring::before,
-  .bwc-marker:focus-visible .bwc-ring::before {
-    animation: bwc-ripple 1.6s ease-out infinite;
-  }
-  @keyframes bwc-ripple {
-    0% { transform: scale(1); opacity: 0.6; }
-    100% { transform: scale(1.45); opacity: 0; }
-  }
-  .bwc-card-title {
-    font-family: var(--bwc-font-head);
-    font-weight: normal;
-    font-size: 14px;
-    letter-spacing: 0.03em;
-    text-transform: uppercase;
-    color: var(--bwc-card-text);
-    margin-bottom: 6px;
-    display: block;
-  }
-  .bwc-card-desc {
-    font-family: var(--bwc-font-body);
-    font-size: 12.5px;
-    line-height: 1.5;
-    color: var(--bwc-card-desc);
-    display: block;
-  }
-
-  /* -------- headline (top-left) -------- */
   .bwc-headline {
     position: absolute;
     top: 6%;
     left: 4%;
-    width: 56%;
+    width: 52%;
     text-align: left;
     z-index: 4;
     pointer-events: none;
+    background: rgba(18, 44, 58, 0.42);
+    backdrop-filter: blur(2px);
+    border-radius: 16px;
+    padding: 20px 24px;
   }
   .bwc-title {
     font-family: var(--bwc-font-head);
     font-weight: normal;
-    color: var(--bwc-title);
-    font-size: clamp(30px, 3.4vw, 54px);
+    color: #fffff0;
+    font-size: clamp(28px, 3.2vw, 50px);
     line-height: 1.08;
     letter-spacing: 0.005em;
+    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
   }
   .bwc-title .bwc-line { display: block; opacity: 0; transform: translateY(28px); }
   .bwc-subtitle {
-    margin-top: 16px;
+    margin-top: 14px;
     display: inline-block;
     font-family: var(--bwc-font-body);
     font-size: clamp(13px, 1vw, 15px);
     font-weight: 700;
     line-height: 1.4;
-    color: var(--bwc-subtitle);
-    background: rgba(255, 255, 255, 0.35);
+    color: #e9e6d5;
+    background: rgba(255, 255, 255, 0.12);
     padding: 8px 12px;
     border-radius: 6px;
     opacity: 0;
