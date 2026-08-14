@@ -1,12 +1,11 @@
 ---
 /**
  * BWL map landing — w1-style hero: a stylised Europe map (central/southern
- * focus) with clickable region markers, pulse rings, label pills and
- * ringed-photo hover cards, plus a bioregion list side panel.
+ * focus) with clickable region markers and ringed-photo hover cards, plus a
+ * side panel (nav toggle + bioregion list) that can be collapsed.
  *
- * Layout: the hero fills the viewport; the left ~80% is the map (ocean
- * backdrop, map centred at its natural aspect ratio), the right ~20% is the
- * bioregion list panel styled like the list-view page.
+ * Layout: left column = the map filling the full column width (ocean
+ * backdrop), right column = the panel stretching to the bottom of the page.
  *
  * Markers are positioned by the same linear projection used to generate the
  * land geometry (src/lib/map-projection.ts), so they sit on the actual spots.
@@ -83,28 +82,59 @@ const paths = [...new Set(europeMap.countries.flatMap((c) => c.d))];
     </div>
 
     <aside class="bio-panel">
+      <button class="bio-close" type="button" aria-label="Hide the bioregions panel">✕</button>
       <SiteNav current="map" variant="inline" />
       <p class="bio-eyebrow">Bioregional Weaving Labs</p>
       <h2 class="bio-title">Bioregions</h2>
-      <div class="bio-list">
-        {regions.map((r) => (
-          <a class="bio-row" href={`${base}bioregions/${r.slug}/`}>
-            <span class="bio-name">{r.name}</span>
-            <span class="bio-country">{r.country}</span>
-          </a>
-        ))}
+      <div class="bio-list-wrap">
+        <div class="bio-list">
+          {regions.map((r) => (
+            <a class="bio-row" href={`${base}bioregions/${r.slug}/`}>
+              <span class="bio-name">{r.name}</span>
+              <span class="bio-country">{r.country}</span>
+            </a>
+          ))}
+        </div>
       </div>
     </aside>
   </div>
+
+  <button class="bio-reopen" type="button" hidden>☰ Bioregions</button>
 </div>
 
 <script>
   const hero = document.getElementById("bwcHero");
+
   function play() {
     hero?.classList.add("is-loaded");
   }
   if (document.readyState === "complete") requestAnimationFrame(play);
   else window.addEventListener("load", () => requestAnimationFrame(play));
+
+  // Collapsible side panel: ✕ hides it (map goes full width), the floating
+  // ☰ button brings it back. Choice is remembered across visits.
+  const closeBtn = hero?.querySelector<HTMLButtonElement>(".bio-close");
+  const reopenBtn = hero?.querySelector<HTMLButtonElement>(".bio-reopen");
+  let hidden = false;
+  try {
+    hidden = localStorage.getItem("bwl-panel-hidden") === "1";
+  } catch {}
+
+  function applyPanel() {
+    hero?.classList.toggle("panel-hidden", hidden);
+    if (reopenBtn) reopenBtn.hidden = !hidden;
+  }
+  closeBtn?.addEventListener("click", () => {
+    hidden = true;
+    try { localStorage.setItem("bwl-panel-hidden", "1"); } catch {}
+    applyPanel();
+  });
+  reopenBtn?.addEventListener("click", () => {
+    hidden = false;
+    try { localStorage.removeItem("bwl-panel-hidden"); } catch {}
+    applyPanel();
+  });
+  applyPanel();
 </script>
 
 <style>
@@ -138,7 +168,8 @@ const paths = [...new Set(europeMap.countries.flatMap((c) => c.d))];
     background: var(--bwc-ocean);
   }
 
-  /* 80 / 20 split: map column vs side panel */
+  /* map column + side panel: the map fills the whole left column (no blue
+     sliver between map and panel); the panel stretches to the page bottom. */
   .bwc-layout {
     display: flex;
     align-items: stretch;
@@ -154,8 +185,6 @@ const paths = [...new Set(europeMap.countries.flatMap((c) => c.d))];
   .bwc-stage {
     position: relative;
     width: 100%;
-    max-width: 100%;
-    max-height: 100%;
     margin: auto;
   }
 
@@ -169,19 +198,41 @@ const paths = [...new Set(europeMap.countries.flatMap((c) => c.d))];
 
   .land path { fill: var(--bwc-land); }
 
-  /* -------- side panel (card with nav header + list) -------- */
+  /* -------- side panel -------- */
   .bio-panel {
     flex: 1 1 0;
     max-width: 400px;
     min-width: 0;
-    align-self: flex-start;
+    position: relative;
     display: flex;
     flex-direction: column;
     background: var(--bwc-card-bg);
     border: 1px solid rgba(32, 64, 79, 0.18);
     border-radius: 18px;
-    padding: 18px;
+    padding: 14px 18px 18px;
     box-shadow: 0 18px 40px var(--bwc-shadow);
+  }
+  .bio-close {
+    align-self: flex-end;
+    width: 26px;
+    height: 26px;
+    margin-bottom: 10px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid rgba(32, 64, 79, 0.18);
+    border-radius: 50%;
+    background: #fffff0;
+    color: var(--bwc-title);
+    font-size: 11px;
+    line-height: 1;
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease;
+  }
+  .bio-close:hover {
+    background: var(--bwc-title);
+    color: #fff;
+    border-color: var(--bwc-title);
   }
   .bio-eyebrow {
     font-family: var(--bwc-font-body);
@@ -190,7 +241,7 @@ const paths = [...new Set(europeMap.countries.flatMap((c) => c.d))];
     text-transform: uppercase;
     letter-spacing: 0.1em;
     color: #6d7a6b;
-    margin-top: 18px;
+    margin-top: 16px;
     margin-bottom: 6px;
   }
   .bio-title {
@@ -198,22 +249,29 @@ const paths = [...new Set(europeMap.countries.flatMap((c) => c.d))];
     font-weight: normal;
     font-size: 26px;
     color: var(--bwc-title);
-    margin-bottom: 16px;
+    margin-bottom: 14px;
+  }
+
+  /* the list sits in its own inset container, embedded in the column */
+  .bio-list-wrap {
+    background: rgba(32, 64, 79, 0.05);
+    border: 1px solid rgba(32, 64, 79, 0.08);
+    border-radius: 14px;
+    padding: 8px;
   }
   .bio-list {
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: 8px;
     overflow-y: auto;
-    padding-right: 2px;
   }
   .bio-row {
     display: flex;
     justify-content: space-between;
     align-items: center;
     gap: 10px;
-    min-height: 50px;
-    padding: 10px 14px;
+    min-height: 46px;
+    padding: 9px 13px;
     background: #fffff0;
     border: 1px solid rgba(32, 64, 79, 0.12);
     border-radius: 10px;
@@ -243,6 +301,40 @@ const paths = [...new Set(europeMap.countries.flatMap((c) => c.d))];
     border-radius: 999px;
     padding: 3px 9px;
   }
+
+  /* panel hidden: map takes the whole width */
+  .bwc-hero.panel-hidden .bio-panel { display: none; }
+  .bwc-hero.panel-hidden .bwc-layout { gap: 0; }
+
+  /* floating button to bring the panel back */
+  .bio-reopen {
+    position: fixed;
+    top: 14px;
+    right: 16px;
+    z-index: 100;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 9px 14px;
+    border: 1px solid rgba(32, 64, 79, 0.18);
+    border-radius: 999px;
+    background: rgba(249, 249, 243, 0.92);
+    color: var(--bwc-title);
+    font-family: var(--bwc-font-body);
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    cursor: pointer;
+    box-shadow: 0 4px 14px rgba(32, 64, 79, 0.14);
+    backdrop-filter: blur(6px);
+    transition: background 0.15s ease, color 0.15s ease;
+  }
+  .bio-reopen:hover {
+    background: var(--bwc-title);
+    color: #fff;
+  }
+  .bio-reopen[hidden] { display: none; }
 
   /* -------- markers -------- */
   .bwc-markers { position: absolute; inset: 0; }
@@ -468,9 +560,7 @@ const paths = [...new Set(europeMap.countries.flatMap((c) => c.d))];
     .bwc-hero { min-height: auto; display: block; }
     .bwc-layout { flex-direction: column; gap: 20px; padding: 0 0 20px; }
     .bwc-stage-col { flex: none; width: 100%; }
-    .bwc-stage { max-height: none; }
     .bio-panel { flex: none; max-width: none; width: 100%; }
-    .bio-list { max-height: none; justify-content: flex-start; }
     .bwc-headline { top: 4%; left: 4%; width: 70%; }
     .bwc-marker { width: var(--hit-m, 6%); }
   }
