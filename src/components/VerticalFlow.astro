@@ -114,16 +114,16 @@ const CS_SIS_GAP = 34; // space between the shift card and its first project
 const GROUP_GAP = 16;  // horizontal space between groups
 const ROW_GAP = 28;    // vertical space between wrapped rows
 
-// Per-shift content: an innovation appears in EVERY shift group it is tagged
-// with (so each shift card visibly has all its innovations — no hidden
-// connections, no crossing lines). Cards that belong to several shifts carry
-// an "also in …" note so the sharing stays explicit.
+// Per-shift content: each innovation is placed ONCE, in its primary (first)
+// shift's group. Its other shifts are connected with dashed cross-links from
+// the card to each shift card, and the card carries an "also in …" note.
+// Hovering a shift highlights all its innovations wherever they sit.
 const innovationsByShift = new Map<string, Innovation[]>();
 for (const inv of innovations) {
-  for (const tag of inv.tags) {
-    if (!innovationsByShift.has(tag)) innovationsByShift.set(tag, []);
-    innovationsByShift.get(tag)!.push(inv);
-  }
+  const tag = inv.tags[0];
+  if (!tag) continue;
+  if (!innovationsByShift.has(tag)) innovationsByShift.set(tag, []);
+  innovationsByShift.get(tag)!.push(inv);
 }
 const shiftNameBySlug = new Map(shifts.map((s) => [s.slug, s.name]));
 
@@ -152,8 +152,10 @@ csCards.sort((a, b) => b.sis.length - a.sis.length);
 // Pack the groups into rows (first-fit bin packing, biggest first): each
 // group is one horizontal band — shift card on the left, its projects to the
 // right. Groups whose projects overflow the canvas wrap internally into extra
-// lines (the row grows to fit the tallest group). Shifts with no projects are
-// skipped, like the horizontal diagram hides orphan shifts.
+// lines (the row grows to fit the tallest group). A shift with no projects of
+// its own still gets a group when other innovations link to it (so every
+// dashed cross-link has a target card); only truly orphan shifts are skipped,
+// like the horizontal diagram hides orphan shifts.
 interface GroupPos {
   c: (typeof csCards)[number]; // the shift card data
   cs: { x: number; y: number }; // shift card top-left
@@ -164,10 +166,13 @@ interface GroupPos {
 const SIS_LINE_GAP = 16;
 
 const availableRow = W - margin.left - margin.right;
+const referencedShifts = new Set<string>();
+for (const inv of innovations) for (const t of inv.tags) referencedShifts.add(t);
+
 const rowsArr: { items: { c: (typeof csCards)[number]; x: number; sisStartX: number; perLine: number; height: number; singleW: number }[]; usedW: number }[] = [];
 for (const c of csCards) {
-  if (c.sis.length === 0) continue;
-  const singleW = csW + CS_SIS_GAP + c.sis.length * (sisW + SIS_GAP) - SIS_GAP;
+  if (c.sis.length === 0 && !referencedShifts.has(c.slug)) continue;
+  const singleW = csW + CS_SIS_GAP + Math.max(0, c.sis.length) * (sisW + SIS_GAP) - (c.sis.length ? SIS_GAP : 0);
   let row = rowsArr.find((r) => r.usedW + GROUP_GAP + singleW <= availableRow);
   if (!row) {
     row = { items: [], usedW: 0 };
@@ -176,8 +181,8 @@ for (const c of csCards) {
   const gx = margin.left + row.usedW + (row.items.length ? GROUP_GAP : 0);
   const sisStartX = gx + csW + CS_SIS_GAP;
   const perLine = Math.max(1, Math.floor((W - margin.right - sisStartX + SIS_GAP) / (sisW + SIS_GAP)));
-  const lines = Math.ceil(c.sis.length / perLine);
-  const groupH = lines * sisCardH + (lines - 1) * SIS_LINE_GAP;
+  const lines = c.sis.length ? Math.ceil(c.sis.length / perLine) : 0;
+  const groupH = lines === 0 ? csH : lines * sisCardH + (lines - 1) * SIS_LINE_GAP;
   row.items.push({ c, x: gx, sisStartX, perLine, height: groupH, singleW });
   row.usedW += (row.items.length > 1 ? GROUP_GAP : 0) + singleW;
 }
@@ -252,7 +257,7 @@ function curve(x1: number, y1: number, x2: number, y2: number, strength = 0.5) {
       />
     ))}
 
-    {/* Shift → its systemic innovations */}
+    {/* Shift → its systemic innovations (primary, solid) */}
     {groups.map((g) =>
       g.sis.map((sp, j) => {
         const inv = g.c.sis[j];
@@ -270,6 +275,32 @@ function curve(x1: number, y1: number, x2: number, y2: number, strength = 0.5) {
             opacity="0.45"
           />
         );
+      })
+    )}
+
+    {/* Cross-links: each innovation also connects (dashed) to its other shifts */}
+    {groups.map((g) =>
+      g.sis.map((sp, j) => {
+        const inv = g.c.sis[j];
+        return inv.tags
+          .filter((t) => t !== g.c.slug)
+          .map((t) => {
+            const target = groups.find((gg) => gg.c.slug === t);
+            if (!target) return null;
+            return (
+              <path
+                class="conn conn-cross"
+                data-from={`sis:${inv.slug}`}
+                data-to={`cs:${t}`}
+                d={curve(sp.x + sisW, sp.y + sisCardH / 2, target.cs.x + csW, target.cs.y + csH / 2, 0.5)}
+                fill="none"
+                stroke={target.c.color}
+                stroke-width="2"
+                stroke-dasharray="5,4"
+                opacity="0.3"
+              />
+            );
+          });
       })
     )}
 

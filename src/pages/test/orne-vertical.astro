@@ -1,0 +1,72 @@
+---
+import { getCollection } from "astro:content";
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import SiteNav from "../../components/SiteNav.astro";
+import VerticalFlow from "../../components/VerticalFlow.astro";
+
+const all = await getCollection("bioregions");
+const orne =
+  all.find((b) => b.data.slug === "orne-fr") ||
+  all.find((b) => b.data.name.toLowerCase().includes("orne"));
+
+const base = import.meta.env.BASE_URL.endsWith("/") ? import.meta.env.BASE_URL : import.meta.env.BASE_URL + "/";
+const data = orne?.data;
+---
+
+<BaseLayout title="Orne Watershed — vertical layout test">
+  <SiteNav current="map" />
+  <a class="back-link" href={base} aria-label="Back to the map">← Map</a>
+  {data ? (
+    <VerticalFlow
+      bioregionName={data.name}
+      bioregionDescription={data.shortNarrative || data.intro}
+      bioregionCountry={data.country}
+      bioregionImageUrl={data.imageUrl}
+      bioregionImageFile={data.imageFile}
+      shifts={data.criticalShifts}
+      innovations={data.systemicInnovations}
+    />
+  ) : (
+    <p class="test-note">Orne Watershed bioregion not found in the current data.</p>
+  )}
+  <p class="test-note">
+    Test layout — vertical: bioregion on top (image left), connected by a bus tree to its critical shifts; each innovation appears once in its primary shift's row, with dashed links to its other shifts. Hover a shift to see all its innovations, or an innovation to see all its shifts.
+  </p>
+</BaseLayout>
+
+<style>
+  .back-link {
+    position: fixed;
+    top: 16px;
+    left: 16px;
+    z-index: 20;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 14px;
+    border-radius: 999px;
+    border: 1px solid var(--line-strong);
+    background: var(--paper-raised);
+    color: var(--bwl-primary);
+    font-family: var(--font-body);
+    font-size: 13px;
+    font-weight: 700;
+    text-decoration: none;
+    box-shadow: 0 1px 4px rgba(32, 64, 79, 0.12);
+    transition: background 0.15s ease, border-color 0.15s ease;
+  }
+  .back-link:hover {
+    background: var(--bwl-primary);
+    color: #fff;
+    border-color: var(--bwl-primary);
+  }
+  .test-note {
+    max-width: 1080px;
+    margin: 1.5rem auto 0;
+    padding: 0 1.5rem;
+    text-align: center;
+    color: var(--mist);
+    font-family: var(--font-body);
+    font-size: 13px;
+  }
+</style>
