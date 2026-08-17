@@ -1,19 +1,17 @@
 ---
 /**
  * Vertical flow diagram — TEST layout for bioregions with many systemic
- * innovations (e.g. Vistula).
+ * innovations (e.g. Vistula). Strict three-band structure, top to bottom:
  *
- * Structure (top to bottom):
  *   1. bioregion card (image on the LEFT of the card)
- *   2. an orthogonal "bus" tree: a horizontal line from the bioregion, with
- *      vertical drops down to every critical shift
- *   3. shift groups: each critical shift card with its systemic innovations
- *      flowing horizontally to its right (image on TOP of each project card);
- *      groups wrap into new rows when they overflow the canvas width.
+ *   2. all critical shifts in ONE horizontal row (compact cards)
+ *   3. all systemic innovations in ONE OR TWO horizontal rows
+ *      (image on TOP of each project card)
  *
- * Connectors stay short and local (shift → its own projects), so the diagram
- * stays readable with many shifts and projects. Hover highlighting behaves
- * like the horizontal FlowDiagram.
+ * Each innovation appears once and is connected to every shift it belongs
+ * to (solid = primary shift, dashed = the others). Hovering a shift
+ * highlights all its innovations wherever they sit; hovering an innovation
+ * highlights all its shifts + the bioregion.
  */
 import SVGTextBlock from "./SVGTextBlock.astro";
 import { notionImageUrl } from "../lib/images";
@@ -76,7 +74,7 @@ const PALETTE = [
 ];
 
 // --- canvas ---
-const W = 1600;
+const W = 1700;
 const margin = { top: 90, right: 60, bottom: 60, left: 60 };
 
 // --- bioregion card (top, image on the left) ---
@@ -103,117 +101,64 @@ const bioNameY = bioTextTop + 24 * 0.8;
 const bioCountryY = bioNameY + bioNameLines.length * 24 + 6;
 const bioDescY = bioCountryY + bioCountryLines.length * 12 + 8;
 
-// --- shift groups: one row per group (shift card + its projects to the right) ---
-const csW = 180;
-const csH = 104;
-const sisW = 200;
-const sisImgH = 92;
-const sisCardH = 190;
-const SIS_GAP = 12;
-const CS_SIS_GAP = 34; // space between the shift card and its first project
-const GROUP_GAP = 16;  // horizontal space between groups
-const ROW_GAP = 28;    // vertical space between wrapped rows
-
-// Per-shift content: each innovation is placed ONCE, in its primary (first)
-// shift's group. Its other shifts are connected with dashed cross-links from
-// the card to each shift card, and the card carries an "also in …" note.
-// Hovering a shift highlights all its innovations wherever they sit.
-const innovationsByShift = new Map<string, Innovation[]>();
-for (const inv of innovations) {
-  const tag = inv.tags[0];
-  if (!tag) continue;
-  if (!innovationsByShift.has(tag)) innovationsByShift.set(tag, []);
-  innovationsByShift.get(tag)!.push(inv);
-}
-const shiftNameBySlug = new Map(shifts.map((s) => [s.slug, s.name]));
-
+// --- critical shifts: ONE horizontal row, compact cards ---
+const shiftIndexBySlug = new Map(shifts.map((s, i) => [s.slug, i]));
+// Shrink the cards so ALL shifts fit in a single row (Orne has 12).
+const csCount = shifts.length;
+const csGap = csCount > 9 ? 8 : 12;
+const csW = Math.min(150, Math.floor((W - margin.left - margin.right - (csCount - 1) * csGap) / csCount));
+const csH = 84;
 const csCards = shifts.map((s, i) => {
-  const nameLines = capLines(wrapToWidth(`${s.emoji || ""} ${s.name}`.trim(), csW - 32, 12, "display"), 2);
-  const leverageLines = capLines(wrapToWidth(s.leveragePoint || "", csW - 32, 9.5, "body"), 2);
-  const sis = (innovationsByShift.get(s.slug) || []).map((inv) => {
-    const hasImage = !!resolveImageSource(inv.imageFile, inv.imageUrl);
-    const nameLines = capLines(wrapToWidth(inv.name || "", sisW - 24, 12, "display"), 2);
-    const descLines = capLines(wrapToWidth(inv.description || "", sisW - 24, 9.5, "body"), 2);
-    const otherTags = inv.tags.filter((t) => t !== s.slug);
-    const otherNames = otherTags.map((t) => shiftNameBySlug.get(t) || t);
-    const alsoLines = capLines(
-      wrapToWidth(`also in: ${otherNames.join(" · ")}`, sisW - 24, 8, "body"),
-      1
-    );
-    return { ...inv, hasImage, nameLines, descLines, alsoLines, otherTags };
-  });
-  return { ...s, nameLines, leverageLines, sis, color: PALETTE[i % PALETTE.length] };
+  const nameLines = capLines(wrapToWidth(`${s.emoji || ""} ${s.name}`.trim(), csW - 24, 12, "display"), 2);
+  const leverageLines = capLines(wrapToWidth(s.leveragePoint || "", csW - 24, 9, "body"), 1);
+  return { ...s, nameLines, leverageLines, color: PALETTE[i % PALETTE.length] };
+});
+const csRowW = csCards.length * csW + Math.max(0, csCards.length - 1) * csGap;
+const csStartX = (W - csRowW) / 2;
+const csTop = bioBottom + 115;
+const csBottom = csTop + csH;
+const csX = (i: number) => csStartX + i * (csW + csGap) + csW / 2;
+
+// --- systemic innovations: ONE or TWO horizontal rows ---
+const sisW = 180;
+const sisImgH = 84;
+const sisCardH = 176;
+const sisGap = 12;
+
+// Order innovations by their primary shift (so each shift's fan stays local),
+// untagged ones last.
+const orderedInnovations = [...innovations].sort((a, b) => {
+  const ia = a.tags.length ? shiftIndexBySlug.get(a.tags[0]) ?? 999 : 999;
+  const ib = b.tags.length ? shiftIndexBySlug.get(b.tags[0]) ?? 999 : 999;
+  return ia - ib;
 });
 
-// Biggest groups first: they take a full row, the small ones then pack into
-// the remaining space.
-csCards.sort((a, b) => b.sis.length - a.sis.length);
+const sisCards = orderedInnovations.map((inv) => {
+  const hasImage = !!resolveImageSource(inv.imageFile, inv.imageUrl);
+  const nameLines = capLines(wrapToWidth(inv.name || "", sisW - 24, 12, "display"), 2);
+  const descLines = capLines(wrapToWidth(inv.description || "", sisW - 24, 9, "body"), 2);
+  const otherTags = inv.tags.slice(1);
+  const otherNames = otherTags.map((t) => shifts.find((s) => s.slug === t)?.name || t);
+  const alsoLines = capLines(wrapToWidth(`also in: ${otherNames.join(" · ")}`, sisW - 24, 8, "body"), 1);
+  return { ...inv, hasImage, nameLines, descLines, alsoLines, otherTags };
+});
 
-// Pack the groups into rows (first-fit bin packing, biggest first): each
-// group is one horizontal band — shift card on the left, its projects to the
-// right. Groups whose projects overflow the canvas wrap internally into extra
-// lines (the row grows to fit the tallest group). A shift with no projects of
-// its own still gets a group when other innovations link to it (so every
-// dashed cross-link has a target card); only truly orphan shifts are skipped,
-// like the horizontal diagram hides orphan shifts.
-interface GroupPos {
-  c: (typeof csCards)[number]; // the shift card data
-  cs: { x: number; y: number }; // shift card top-left
-  sis: { x: number; y: number }[]; // project card top-lefts
-  rowTop: number;
-  height: number;
-}
-const SIS_LINE_GAP = 16;
+const perLine = Math.max(1, Math.floor((W - margin.left - margin.right + sisGap) / (sisW + sisGap)));
+const lines = Math.ceil(sisCards.length / perLine);
+const sisTop = csBottom + 95;
+const sisPositions = sisCards.map((_, j) => ({
+  x: margin.left + (j % perLine) * (sisW + sisGap),
+  y: sisTop + Math.floor(j / perLine) * (sisCardH + 16),
+}));
+const sisBottom = sisPositions.length ? sisPositions[sisPositions.length - 1].y + sisCardH : sisTop;
+const height = sisBottom + margin.bottom;
 
-const availableRow = W - margin.left - margin.right;
-const referencedShifts = new Set<string>();
-for (const inv of innovations) for (const t of inv.tags) referencedShifts.add(t);
-
-const rowsArr: { items: { c: (typeof csCards)[number]; x: number; sisStartX: number; perLine: number; height: number; singleW: number }[]; usedW: number }[] = [];
-for (const c of csCards) {
-  if (c.sis.length === 0 && !referencedShifts.has(c.slug)) continue;
-  const singleW = csW + CS_SIS_GAP + Math.max(0, c.sis.length) * (sisW + SIS_GAP) - (c.sis.length ? SIS_GAP : 0);
-  let row = rowsArr.find((r) => r.usedW + GROUP_GAP + singleW <= availableRow);
-  if (!row) {
-    row = { items: [], usedW: 0 };
-    rowsArr.push(row);
-  }
-  const gx = margin.left + row.usedW + (row.items.length ? GROUP_GAP : 0);
-  const sisStartX = gx + csW + CS_SIS_GAP;
-  const perLine = Math.max(1, Math.floor((W - margin.right - sisStartX + SIS_GAP) / (sisW + SIS_GAP)));
-  const lines = c.sis.length ? Math.ceil(c.sis.length / perLine) : 0;
-  const groupH = lines === 0 ? csH : lines * sisCardH + (lines - 1) * SIS_LINE_GAP;
-  row.items.push({ c, x: gx, sisStartX, perLine, height: groupH, singleW });
-  row.usedW += (row.items.length > 1 ? GROUP_GAP : 0) + singleW;
-}
-
-// Assign vertical positions row by row; groups centre vertically in their row.
-const groups: GroupPos[] = [];
-let gy = bioBottom + 120; // room for the bus + drops
-for (const row of rowsArr) {
-  const rowH = Math.max(...row.items.map((p) => p.height));
-  for (const p of row.items) {
-    const sisPos = p.c.sis.map((_, j) => ({
-      x: p.sisStartX + (j % p.perLine) * (sisW + SIS_GAP),
-      y: gy + (rowH - p.height) / 2 + Math.floor(j / p.perLine) * (sisCardH + SIS_LINE_GAP),
-    }));
-    groups.push({
-      c: p.c,
-      cs: { x: p.x, y: gy + (rowH - csH) / 2 },
-      sis: sisPos,
-      rowTop: gy,
-      height: p.height,
-    });
-  }
-  gy += rowH + ROW_GAP;
-}
-const contentBottom = gy - ROW_GAP;
-const height = contentBottom + margin.bottom;
-
-// --- bus tree: bioregion → all shifts ---
-const busY = bioBottom + 50;
+// --- bus tree: bioregion → shifts ---
+const busY = bioBottom + 55;
 const busLeft = margin.left + 40;
 const busRight = W - margin.right - 40;
+
+const csBySlug = new Map(csCards.map((c) => [c.slug, c]));
 
 function curve(x1: number, y1: number, x2: number, y2: number, strength = 0.5) {
   const dx = x2 - x1;
@@ -233,7 +178,7 @@ function curve(x1: number, y1: number, x2: number, y2: number, strength = 0.5) {
   >
     <title>Vertical layout test — {bioregionName}</title>
     <desc>
-      {bioregionName} on top, connected to its critical shifts, each with its systemic innovations flowing horizontally.
+      {bioregionName} on top, its critical shifts in a row, then the systemic innovations in horizontal rows.
     </desc>
 
     <defs>
@@ -244,65 +189,42 @@ function curve(x1: number, y1: number, x2: number, y2: number, strength = 0.5) {
 
     {/* Bus tree: bioregion → shifts */}
     <path class="conn conn-bio-bus" data-from="bio" data-to="bio" d={`M${bioX},${bioBottom} L${bioX},${busY} L${busLeft},${busY} L${busRight},${busY}`} fill="none" stroke="#20404f" stroke-width="2.5" opacity="0.35" stroke-linejoin="round" />
-    {groups.map((g) => (
+    {csCards.map((s, i) => (
       <path
-        class={`conn conn-drop conn-drop-${g.c.slug}`}
+        class={`conn conn-drop conn-drop-${s.slug}`}
         data-from="bio"
-        data-to={`cs:${g.c.slug}`}
-        d={`M${g.cs.x + csW / 2},${busY} L${g.cs.x + csW / 2},${g.cs.y}`}
+        data-to={`cs:${s.slug}`}
+        d={`M${csX(i)},${busY} L${csX(i)},${csTop}`}
         fill="none"
-        stroke={g.c.color}
+        stroke={s.color}
         stroke-width="2.5"
         opacity="0.4"
       />
     ))}
 
-    {/* Shift → its systemic innovations (primary, solid) */}
-    {groups.map((g) =>
-      g.sis.map((sp, j) => {
-        const inv = g.c.sis[j];
-        const csCy = g.cs.y + csH / 2;
-        const sisCy = sp.y + sisCardH / 2;
+    {/* Innovations → their shifts (solid = primary, dashed = other tags) */}
+    {sisCards.map((inv, j) => {
+      const fromX = sisPositions[j].x + sisW / 2;
+      const fromY = sisPositions[j].y;
+      return inv.tags.map((t, k) => {
+        const csIdx = shiftIndexBySlug.get(t);
+        if (csIdx === undefined) return null;
+        const primary = k === 0;
         return (
           <path
-            class="conn conn-cs-sis"
-            data-from={`cs:${g.c.slug}`}
-            data-to={`sis:${inv.slug}`}
-            d={curve(g.cs.x + csW, csCy, sp.x, sisCy, 0.45)}
+            class={`conn ${primary ? "conn-cs-sis" : "conn-cross"}`}
+            data-from={`sis:${inv.slug}`}
+            data-to={`cs:${t}`}
+            d={curve(fromX, fromY, csX(csIdx), csBottom, 0.5)}
             fill="none"
-            stroke={g.c.color}
-            stroke-width="2.5"
-            opacity="0.45"
+            stroke={csBySlug.get(t)!.color}
+            stroke-width={primary ? 2.5 : 2}
+            stroke-dasharray={primary ? "none" : "5,4"}
+            opacity={primary ? 0.45 : 0.3}
           />
         );
-      })
-    )}
-
-    {/* Cross-links: each innovation also connects (dashed) to its other shifts */}
-    {groups.map((g) =>
-      g.sis.map((sp, j) => {
-        const inv = g.c.sis[j];
-        return inv.tags
-          .filter((t) => t !== g.c.slug)
-          .map((t) => {
-            const target = groups.find((gg) => gg.c.slug === t);
-            if (!target) return null;
-            return (
-              <path
-                class="conn conn-cross"
-                data-from={`sis:${inv.slug}`}
-                data-to={`cs:${t}`}
-                d={curve(sp.x + sisW, sp.y + sisCardH / 2, target.cs.x + csW, target.cs.y + csH / 2, 0.5)}
-                fill="none"
-                stroke={target.c.color}
-                stroke-width="2"
-                stroke-dasharray="5,4"
-                opacity="0.3"
-              />
-            );
-          });
-      })
-    )}
+      });
+    })}
 
     {/* Bioregion card */}
     <g class="card bio-card" data-el="bio" data-root="bio" tabindex="0">
@@ -347,93 +269,91 @@ function curve(x1: number, y1: number, x2: number, y2: number, strength = 0.5) {
       />
     </g>
 
-    {/* Critical shift cards */}
-    {groups.map((g) => {
-      const s = g.c;
-      const nameY = g.cs.y + 16 + 14 * 0.8;
-      const leverageY = nameY + s.nameLines.length * 14 + 4;
+    {/* Critical shift cards (one row) */}
+    {csCards.map((s, i) => {
+      const x = csStartX + i * (csW + csGap);
+      const nameY = csTop + 12 + 14 * 0.8;
+      const leverageY = nameY + s.nameLines.length * 14 + 3;
       return (
         <g class={`card cs-card cs-${s.slug}`} data-el={`cs:${s.slug}`} tabindex="0">
-          <rect x={g.cs.x} y={g.cs.y} width={csW} height={csH} rx="12" fill="var(--paper-raised)" stroke={s.color} stroke-width="2" filter="url(#softShadow)" />
+          <rect x={x} y={csTop} width={csW} height={csH} rx="10" fill="var(--paper-raised)" stroke={s.color} stroke-width="2" filter="url(#softShadow)" />
           <SVGTextBlock
             lines={s.nameLines}
-            x={g.cs.x + 16}
+            x={x + 12}
             y={nameY}
             lineHeight="1.2em"
             style="font-family:var(--font-display);font-size:12px;font-weight:bold;fill:var(--bwl-primary);"
           />
           <SVGTextBlock
             lines={s.leverageLines}
-            x={g.cs.x + 16}
+            x={x + 12}
             y={leverageY}
             lineHeight="1.3em"
-            style="font-family:var(--font-body);font-size:9.5px;fill:var(--bwl-text);opacity:0.85;"
+            style="font-family:var(--font-body);font-size:9px;fill:var(--bwl-text);opacity:0.85;"
           />
         </g>
       );
     })}
 
     {/* Systemic innovation cards (image on top) */}
-    {groups.map((g) =>
-      g.sis.map((sp, j) => {
-        const inv = g.c.sis[j];
-        const sisImageSrc = resolveImageSource(inv.imageFile, inv.imageUrl);
-        const nameY = sp.y + sisImgH + 8 + 14 * 0.8;
-        const descY = nameY + inv.nameLines.length * 14 + 3;
-        const alsoY = descY + inv.descLines.length * 12 + 3;
-        return (
-          <g class="card sis-card" data-el={`sis:${inv.slug}`} tabindex="0">
-            <rect x={sp.x} y={sp.y} width={sisW} height={sisCardH} rx="12" fill="#ffffff" stroke="var(--line-strong)" stroke-width="1.5" filter="url(#softShadow)" />
-            {sisImageSrc && (
-              <image
-                x={sp.x}
-                y={sp.y}
-                width={sisW}
-                height={sisImgH}
-                href={sisImageSrc}
-                clip-path="inset(0px round 12px 12px 0 0)"
-                preserveAspectRatio="xMidYMid slice"
-              />
-            )}
-            <rect x={sp.x} y={sp.y} width={sisW} height={sisCardH} rx="12" fill="none" stroke="var(--line-strong)" stroke-width="1.5" />
-            <SVGTextBlock
-              lines={inv.nameLines}
-              x={sp.x + 12}
-              y={nameY}
-              lineHeight="1.15em"
-              anchor="start"
-              style="font-family:var(--font-display);font-size:12px;font-weight:bold;fill:var(--bwl-primary);"
+    {sisCards.map((inv, j) => {
+      const { x, y } = sisPositions[j];
+      const sisImageSrc = resolveImageSource(inv.imageFile, inv.imageUrl);
+      const nameY = y + sisImgH + 8 + 14 * 0.8;
+      const descY = nameY + inv.nameLines.length * 14 + 3;
+      const alsoY = descY + inv.descLines.length * 12 + 3;
+      return (
+        <g class="card sis-card" data-el={`sis:${inv.slug}`} tabindex="0">
+          <rect x={x} y={y} width={sisW} height={sisCardH} rx="10" fill="#ffffff" stroke="var(--line-strong)" stroke-width="1.5" filter="url(#softShadow)" />
+          {sisImageSrc && (
+            <image
+              x={x}
+              y={y}
+              width={sisW}
+              height={sisImgH}
+              href={sisImageSrc}
+              clip-path="inset(0px round 10px 10px 0 0)"
+              preserveAspectRatio="xMidYMid slice"
             />
+          )}
+          <rect x={x} y={y} width={sisW} height={sisCardH} rx="10" fill="none" stroke="var(--line-strong)" stroke-width="1.5" />
+          <SVGTextBlock
+            lines={inv.nameLines}
+            x={x + 12}
+            y={nameY}
+            lineHeight="1.15em"
+            anchor="start"
+            style="font-family:var(--font-display);font-size:12px;font-weight:bold;fill:var(--bwl-primary);"
+          />
+          <SVGTextBlock
+            lines={inv.descLines}
+            x={x + 12}
+            y={descY}
+            lineHeight="1.3em"
+            anchor="start"
+            style="font-family:var(--font-body);font-size:9px;fill:var(--bwl-text);opacity:0.85;"
+          />
+          {inv.otherTags.length > 0 && (
             <SVGTextBlock
-              lines={inv.descLines}
-              x={sp.x + 12}
-              y={descY}
-              lineHeight="1.3em"
+              lines={inv.alsoLines}
+              x={x + 12}
+              y={alsoY}
+              lineHeight="1.2em"
               anchor="start"
-              style="font-family:var(--font-body);font-size:9.5px;fill:var(--bwl-text);opacity:0.85;"
+              style="font-family:var(--font-body);font-size:8px;font-weight:bold;fill:var(--bwl-secondary);"
             />
-            {inv.otherTags.length > 0 && (
-              <SVGTextBlock
-                lines={inv.alsoLines}
-                x={sp.x + 12}
-                y={alsoY}
-                lineHeight="1.2em"
-                anchor="start"
-                style="font-family:var(--font-body);font-size:8px;font-weight:bold;fill:var(--bwl-secondary);"
-              />
-            )}
-            {inv.notionUrl && (
-              <a href={inv.notionUrl} target="_blank" rel="noopener">
-                <g>
-                  <circle cx={sp.x + sisW - 15} cy={sp.y + 22} r="8" fill="var(--bwl-secondary)" opacity="0.15" />
-                  <text x={sp.x + sisW - 15} y={sp.y + 25} text-anchor="middle" font-size="10" fill="var(--bwl-primary)" font-family="var(--font-body)" font-weight="bold">↗</text>
-                </g>
-              </a>
-            )}
-          </g>
-        );
-      })
-    )}
+          )}
+          {inv.notionUrl && (
+            <a href={inv.notionUrl} target="_blank" rel="noopener">
+              <g>
+                <circle cx={x + sisW - 15} cy={y + 20} r="8" fill="var(--bwl-secondary)" opacity="0.15" />
+                <text x={x + sisW - 15} y={y + 23} text-anchor="middle" font-size="10" fill="var(--bwl-primary)" font-family="var(--font-body)" font-weight="bold">↗</text>
+              </g>
+            </a>
+          )}
+        </g>
+      );
+    })}
   </svg>
 </div>
 
