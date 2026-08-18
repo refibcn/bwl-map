@@ -14,8 +14,12 @@ export interface Bounds {
 
 const bounds = europeMap.bounds as Bounds;
 
+// Same projection as the generator: equirectangular with a standard parallel
+// at 45N (longitude compressed by cos(45)) — keeps marker/land alignment.
+const COS_PHI = Math.cos((45 * Math.PI) / 180);
+
 export function projectToPercent(lat: number, lng: number): { x: number; y: number } {
-  const x = ((lng - bounds.lngMin) / (bounds.lngMax - bounds.lngMin)) * 100;
+  const x = ((lng - bounds.lngMin) / (bounds.lngMax - bounds.lngMin)) * 100 * COS_PHI;
   const y = ((bounds.latMax - lat) / (bounds.latMax - bounds.latMin)) * 100;
   return { x, y };
 }

@@ -1,14 +1,13 @@
 ---
 /**
- * BWL map landing — w1-style hero: a stylised Europe map (central/southern
- * focus) with clickable region markers and ringed-photo hover cards, plus a
- * side panel (nav toggle + bioregion list) that can be collapsed.
+ * BWL map landing — w1-style Europe map (natural proportions) with clickable
+ * region markers (photo circles, no pop-ups) and a left side panel holding
+ * the brand block (logo + title) and the bioregion list. The panel can be
+ * collapsed (map goes full width) via the ✕ and reopened with a floating
+ * "☰ Bioregions" button styled like the bioregion pages' back-link.
  *
- * Layout: left column = the map filling the full column width (ocean
- * backdrop), right column = the panel stretching to the bottom of the page.
- *
- * Markers are positioned by the same linear projection used to generate the
- * land geometry (src/lib/map-projection.ts), so they sit on the actual spots.
+ * Markers are positioned by the same projection used to generate the land
+ * geometry (src/lib/map-projection.ts), so they sit on the actual spots.
  */
 import europeMap from "../data/europe-map.json";
 import { notionImageUrl } from "../lib/images";
@@ -28,8 +27,29 @@ const paths = [...new Set(europeMap.countries.flatMap((c) => c.d))];
 ---
 
 <div class="bwc-hero" id="bwcHero">
-  <img class="bwl-logo" src={`${base}bwl-logo.jpg`} alt="Bioregional Weaving Labs" />
   <div class="bwc-layout">
+    <aside class="bio-panel">
+      <button class="bio-close" type="button" aria-label="Hide the bioregions panel">✕</button>
+      <img class="bwl-logo" src={`${base}bwl-logo.jpg`} alt="Bioregional Weaving Labs" />
+      <h1 class="bio-hero-title">
+        Weaving Communities of Action,<br />
+        Rooted in Place
+      </h1>
+      <p class="bio-hero-subtitle">Explore a bioregion by clicking on the map</p>
+      <div class="bio-divider"></div>
+      <h2 class="bio-title">Bioregions</h2>
+      <div class="bio-list-wrap">
+        <div class="bio-list">
+          {regions.map((r) => (
+            <a class="bio-row" href={`${base}bioregions/${r.slug}/`}>
+              <span class="bio-name">{r.name}</span>
+              <span class="bio-country">{r.country}</span>
+            </a>
+          ))}
+        </div>
+      </div>
+    </aside>
+
     <div class="bwc-stage-col">
       <div class="bwc-stage" style={`aspect-ratio:${W}/${H}`}>
         <svg
@@ -69,31 +89,8 @@ const paths = [...new Set(europeMap.countries.flatMap((c) => c.d))];
             );
           })}
         </div>
-
-        <div class="bwc-headline">
-          <h1 class="bwc-title">
-            <span class="bwc-line">Weaving Communities of Action,</span>
-            <span class="bwc-line">Rooted in Place</span>
-          </h1>
-          <div class="bwc-subtitle">Explore a bioregion by clicking on the map</div>
-        </div>
       </div>
     </div>
-
-    <aside class="bio-panel">
-      <button class="bio-close" type="button" aria-label="Hide the bioregions panel">✕</button>
-      <h2 class="bio-title">Bioregions</h2>
-      <div class="bio-list-wrap">
-        <div class="bio-list">
-          {regions.map((r) => (
-            <a class="bio-row" href={`${base}bioregions/${r.slug}/`}>
-              <span class="bio-name">{r.name}</span>
-              <span class="bio-country">{r.country}</span>
-            </a>
-          ))}
-        </div>
-      </div>
-    </aside>
   </div>
 
   <button class="bio-reopen" type="button" hidden>☰ Bioregions</button>
@@ -144,11 +141,8 @@ const paths = [...new Set(europeMap.countries.flatMap((c) => c.d))];
     --bwc-title: #20404f;      /* headline colour                */
     --bwc-subtitle: #0a1419;
     --bwc-card-bg: #f9f9f3;
-    --bwc-card-text: #20404f;
-    --bwc-card-desc: #e2ad4f;
-    --bwc-label-text: #fffff0;
     --bwc-shadow: rgba(20, 40, 30, 0.28);
-    --bwc-font-head: "Sentinel Bold", Georgia, "Times New Roman", serif;
+    --bwc-font-head: "Besley", Georgia, "Times New Roman", serif;
     --bwc-font-body: "Lato", Helvetica, Arial, sans-serif;
   }
 
@@ -165,8 +159,7 @@ const paths = [...new Set(europeMap.countries.flatMap((c) => c.d))];
     background: var(--bwc-ocean);
   }
 
-  /* map column + side panel: the map fills the whole left column (no blue
-     sliver between map and panel); the panel stretches to the page bottom. */
+  /* side panel (left) + map (right): the map fills the whole column width. */
   .bwc-layout {
     display: flex;
     align-items: stretch;
@@ -190,12 +183,11 @@ const paths = [...new Set(europeMap.countries.flatMap((c) => c.d))];
     width: 100%;
     height: 100%;
     opacity: 0;
-    transform: scale(1.05);
   }
 
   .land path { fill: var(--bwc-land); }
 
-  /* -------- side panel -------- */
+  /* -------- side panel (left): brand block + bioregion list -------- */
   .bio-panel {
     flex: 1 1 0;
     min-width: 300px;
@@ -213,7 +205,7 @@ const paths = [...new Set(europeMap.countries.flatMap((c) => c.d))];
     align-self: flex-end;
     width: 26px;
     height: 26px;
-    margin-bottom: 14px;
+    margin-bottom: 8px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -231,12 +223,44 @@ const paths = [...new Set(europeMap.countries.flatMap((c) => c.d))];
     color: #fff;
     border-color: var(--bwc-title);
   }
+  .bwl-logo {
+    width: 52px;
+    height: 52px;
+    border-radius: 14px;
+    object-fit: cover;
+    box-shadow: 0 4px 14px rgba(32, 64, 79, 0.25);
+    margin-bottom: 16px;
+  }
+  .bio-hero-title {
+    font-family: var(--bwc-font-head);
+    font-weight: 700;
+    font-size: 24px;
+    line-height: 1.15;
+    color: var(--bwc-title);
+  }
+  .bio-hero-subtitle {
+    margin-top: 10px;
+    font-family: var(--bwc-font-body);
+    font-size: 12.5px;
+    font-weight: 700;
+    line-height: 1.4;
+    color: #0a1419;
+    background: rgba(255, 255, 255, 0.55);
+    border: 1px solid rgba(255, 255, 255, 0.7);
+    border-radius: 6px;
+    padding: 7px 10px;
+  }
+  .bio-divider {
+    height: 1px;
+    background: rgba(32, 64, 79, 0.14);
+    margin: 22px 0 18px;
+  }
   .bio-title {
     font-family: var(--bwc-font-head);
-    font-weight: normal;
-    font-size: 26px;
+    font-weight: 700;
+    font-size: 20px;
     color: var(--bwc-title);
-    margin-bottom: 18px;
+    margin-bottom: 14px;
   }
 
   /* the list sits in its own inset container, embedded in the column */
@@ -244,12 +268,12 @@ const paths = [...new Set(europeMap.countries.flatMap((c) => c.d))];
     background: rgba(32, 64, 79, 0.05);
     border: 1px solid rgba(32, 64, 79, 0.08);
     border-radius: 14px;
-    padding: 10px;
+    padding: 14px;
   }
   .bio-list {
     display: flex;
     flex-direction: column;
-    gap: 9px;
+    gap: 10px;
     overflow-y: auto;
   }
   .bio-row {
@@ -258,7 +282,7 @@ const paths = [...new Set(europeMap.countries.flatMap((c) => c.d))];
     align-items: center;
     gap: 10px;
     min-height: 48px;
-    padding: 10px 14px;
+    padding: 12px 18px;
     background: #fffff0;
     border: 1px solid rgba(32, 64, 79, 0.12);
     border-radius: 10px;
@@ -266,13 +290,13 @@ const paths = [...new Set(europeMap.countries.flatMap((c) => c.d))];
     transition: border-color 0.15s ease, background 0.15s ease;
   }
   .bio-row:hover {
-    border-color: var(--bwc-card-desc);
+    border-color: var(--bwl-secondary);
     background: #fff;
   }
   .bio-name {
     font-family: var(--bwc-font-head);
-    font-weight: normal;
-    font-size: 15px;
+    font-weight: 600;
+    font-size: 14.5px;
     line-height: 1.25;
     color: var(--bwc-title);
   }
@@ -293,7 +317,8 @@ const paths = [...new Set(europeMap.countries.flatMap((c) => c.d))];
   .bwc-hero.panel-hidden .bio-panel { display: none; }
   .bwc-hero.panel-hidden .bwc-layout { gap: 0; }
 
-  /* floating button to bring the panel back */
+  /* floating button to bring the panel back — styled like the bioregion
+     pages' "← Map" back-link */
   .bio-reopen {
     position: fixed;
     top: 14px;
@@ -301,25 +326,23 @@ const paths = [...new Set(europeMap.countries.flatMap((c) => c.d))];
     z-index: 100;
     display: inline-flex;
     align-items: center;
-    gap: 6px;
-    padding: 9px 14px;
-    border: 1px solid rgba(32, 64, 79, 0.18);
+    gap: 8px;
+    padding: 10px 16px;
     border-radius: 999px;
-    background: rgba(249, 249, 243, 0.92);
-    color: var(--bwc-title);
-    font-family: var(--bwc-font-body);
-    font-size: 12px;
+    border: 1px solid var(--line-strong);
+    background: var(--paper-raised);
+    color: var(--bwl-primary);
+    font-family: var(--font-body);
+    font-size: 13px;
     font-weight: 700;
-    letter-spacing: 0.05em;
-    text-transform: uppercase;
     cursor: pointer;
-    box-shadow: 0 4px 14px rgba(32, 64, 79, 0.14);
-    backdrop-filter: blur(6px);
-    transition: background 0.15s ease, color 0.15s ease;
+    box-shadow: 0 1px 4px rgba(32, 64, 79, 0.12);
+    transition: background 0.15s ease, border-color 0.15s ease;
   }
   .bio-reopen:hover {
-    background: var(--bwc-title);
+    background: var(--bwl-primary);
     color: #fff;
+    border-color: var(--bwl-primary);
   }
   .bio-reopen[hidden] { display: none; }
 
@@ -395,7 +418,7 @@ const paths = [...new Set(europeMap.countries.flatMap((c) => c.d))];
     text-align: center;
     text-transform: uppercase;
     white-space: nowrap;
-    color: var(--bwc-label-text);
+    color: var(--bwc-label-text, #fffff0);
     background: var(--ring, #c9762b);
     padding: 4px 7px;
     border-radius: 5px;
@@ -409,87 +432,25 @@ const paths = [...new Set(europeMap.countries.flatMap((c) => c.d))];
     transform: translateX(-50%) translateY(1px);
   }
 
-  /* -------- fixed header logo (top-left) -------- */
-  .bwl-logo {
-    position: fixed;
-    top: 12px;
-    left: 16px;
-    z-index: 100;
-    width: 42px;
-    height: 42px;
-    border-radius: 12px;
-    object-fit: cover;
-    box-shadow: 0 4px 14px rgba(32, 64, 79, 0.25);
-  }
-
-  /* -------- headline (top-left, w1-style: dark bold title on frosted light) -------- */
-  .bwc-headline {
-    position: absolute;
-    top: 8%;
-    left: 4%;
-    width: 56%;
-    text-align: left;
-    z-index: 4;
-    pointer-events: none;
-    background: rgba(255, 255, 255, 0.42);
-    backdrop-filter: blur(3px);
-    border: 1px solid rgba(255, 255, 255, 0.55);
-    border-radius: 18px;
-    padding: 26px 32px;
-  }
-  .bwc-title {
-    font-family: var(--bwc-font-head); /* Sentinel Bold — the face is already bold */
-    font-weight: normal;
-    color: #20404f;
-    font-size: clamp(28px, 3.2vw, 50px);
-    line-height: 1.08;
-    letter-spacing: 0.005em;
-  }
-  .bwc-title .bwc-line { display: block; opacity: 0; transform: translateY(28px); }
-  .bwc-subtitle {
-    margin-top: 14px;
-    display: inline-block;
-    font-family: var(--bwc-font-body); /* Lato */
-    font-size: clamp(13px, 1vw, 15px);
-    font-weight: 700;
-    line-height: 1.4;
-    color: #0a1419;
-    background: rgba(255, 255, 255, 0.5);
-    border: 1px solid rgba(255, 255, 255, 0.65);
-    padding: 8px 12px;
-    border-radius: 6px;
-    opacity: 0;
-    transform: translateY(16px);
-  }
-
-  /* -------- entrance animations -------- */
+  /* -------- entrance animations (fade only — the map never scales, so the
+     markers stay glued to the land at every zoom level) -------- */
   .bwc-hero.is-loaded .bwc-map {
-    animation: bwc-map-in 1.5s cubic-bezier(0.2, 0.7, 0.2, 1) forwards;
-  }
-  .bwc-hero.is-loaded .bwc-title .bwc-line {
-    animation: bwc-rise 0.9s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
-  }
-  .bwc-hero.is-loaded .bwc-title .bwc-line:nth-child(1) { animation-delay: 0.5s; }
-  .bwc-hero.is-loaded .bwc-title .bwc-line:nth-child(2) { animation-delay: 0.68s; }
-  .bwc-hero.is-loaded .bwc-subtitle {
-    animation: bwc-rise 0.9s 1s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+    animation: bwc-map-in 1.2s ease forwards;
   }
   .bwc-hero.is-loaded .bwc-marker {
-    animation: bwc-pop 0.7s cubic-bezier(0.2, 0.9, 0.3, 1.5) forwards;
-    animation-delay: calc(1s + var(--i) * 0.14s);
+    animation: bwc-pop 0.6s cubic-bezier(0.2, 0.9, 0.3, 1.4) forwards;
+    animation-delay: calc(0.8s + var(--i) * 0.12s);
   }
-  @keyframes bwc-map-in { to { opacity: 1; transform: scale(1); } }
-  @keyframes bwc-rise { to { opacity: 1; transform: translateY(0); } }
+  @keyframes bwc-map-in { to { opacity: 1; } }
   @keyframes bwc-pop {
-    0% { opacity: 0; transform: translate(-50%, -50%) scale(0.3); }
-    70% { opacity: 1; transform: translate(-50%, -50%) scale(1.12); }
+    0% { opacity: 0; transform: translate(-50%, -50%) scale(0.4); }
+    70% { opacity: 1; transform: translate(-50%, -50%) scale(1.1); }
     100% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
   }
 
   @media (prefers-reduced-motion: reduce) {
     .bwc-hero * { animation: none !important; }
-    .bwc-map, .bwc-marker, .bwc-title .bwc-line, .bwc-subtitle { opacity: 1 !important; }
-    .bwc-map { transform: none !important; }
+    .bwc-map, .bwc-marker { opacity: 1 !important; }
     .bwc-marker { transform: translate(-50%, -50%) !important; }
   }
 
@@ -499,10 +460,6 @@ const paths = [...new Set(europeMap.countries.flatMap((c) => c.d))];
     .bwc-layout { flex-direction: column; gap: 20px; padding: 0 0 20px; }
     .bwc-stage-col { flex: none; width: 100%; }
     .bio-panel { flex: none; max-width: none; width: 100%; }
-    .bwc-headline { top: 4%; left: 4%; width: 70%; }
     .bwc-marker { width: var(--hit-m, 6%); }
-  }
-  @media (max-width: 520px) {
-    .bwc-headline { width: 88%; }
   }
 </style>

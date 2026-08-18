@@ -417,7 +417,6 @@ function curve(x1: number, y1: number, x2: number, y2: number, strength = 0.5) {
             fill={untagged ? "var(--paper-raised)" : "#ffffff"}
             stroke={untagged ? "var(--bwl-muted)" : "var(--line-strong)"}
             stroke-width="1.5"
-            stroke-dasharray={untagged ? "4,3" : "none"}
             filter="url(#softShadow)"
           />
           {sisImageSrc && (
@@ -441,7 +440,6 @@ function curve(x1: number, y1: number, x2: number, y2: number, strength = 0.5) {
               fill="none"
               stroke={untagged ? "var(--bwl-muted)" : "var(--line-strong)"}
               stroke-width="1.5"
-              stroke-dasharray={untagged ? "4,3" : "none"}
             />
           )}
           <SVGTextBlock

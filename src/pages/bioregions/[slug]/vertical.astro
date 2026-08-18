@@ -1,8 +1,8 @@
 ---
 import { getCollection } from "astro:content";
-import BaseLayout from "../../layouts/BaseLayout.astro";
-import SiteNav from "../../components/SiteNav.astro";
-import FlowDiagram from "../../components/FlowDiagram.astro";
+import BaseLayout from "../../../layouts/BaseLayout.astro";
+import SiteNav from "../../../components/SiteNav.astro";
+import VerticalFlow from "../../../components/VerticalFlow.astro";
 
 export async function getStaticPaths() {
   const all = await getCollection("bioregions");
@@ -14,20 +14,18 @@ export async function getStaticPaths() {
 
 const { entry } = Astro.props as any;
 const data = entry.data;
-
-// Use the dedicated short narrative from Notion when available.
-const bioDescription = data.shortNarrative || data.intro;
 const base = import.meta.env.BASE_URL.endsWith("/") ? import.meta.env.BASE_URL : import.meta.env.BASE_URL + "/";
+const bioDescription = data.shortNarrative || data.intro;
 ---
 
-<BaseLayout title={`${data.name} — BWL portfolio`}>
+<BaseLayout title={`${data.name} — vertical view`}>
   <SiteNav current="map" />
   <a class="back-link" href={base} aria-label="Back to the map">← Map</a>
   <nav class="view-switch" aria-label="Layout view">
-    <a class="active" href={`${base}bioregions/${data.slug}/`}>Horizontal</a>
-    <a href={`${base}bioregions/${data.slug}/vertical/`}>Vertical</a>
+    <a href={`${base}bioregions/${data.slug}/`}>Horizontal</a>
+    <a class="active" href={`${base}bioregions/${data.slug}/vertical/`}>Vertical</a>
   </nav>
-  <FlowDiagram
+  <VerticalFlow
     bioregionName={data.name}
     bioregionDescription={bioDescription}
     bioregionCountry={data.country}

@@ -15,3 +15,9 @@ const regions = buildMapRegions(all.map((b) => b.data));
     <EuropeMap regions={regions} />
   </main>
 </BaseLayout>
+
+<style is:global>
+  /* The landing is all-ocean: keep the page background blue so overscroll /
+     browser zoom never reveals white around the map. */
+  body { background: #8da5af; }
+</style>

@@ -1,13 +1,3 @@
-@font-face {
-  font-family: "Sentinel Bold";
-  font-style: normal;
-  font-weight: bold;
-  font-display: swap;
-  src:
-    url("https://bioregionalweavinglabs.org/wp-content/uploads/2026/06/Sentinel-Bold.woff2") format("woff2"),
-    url("https://bioregionalweavinglabs.org/wp-content/uploads/2026/06/Sentinel-Bold-iF6618f54f7d67f.woff") format("woff");
-}
-
 :root {
   /* BWL brand colours */
   --bwl-primary: #20404f;
@@ -29,7 +19,7 @@
   --mist-dim: #9caa9a;
 
   /* Typography */
-  --font-display: "Sentinel Bold", Georgia, serif;
+  --font-display: "Besley", Georgia, serif;
   --font-body: "Lato", system-ui, -apple-system, sans-serif;
 }
 

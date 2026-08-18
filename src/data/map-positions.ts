@@ -17,12 +17,14 @@ export interface MapPosition {
 }
 
 export const MAP_POSITIONS: Record<string, MapPosition> = {
-  "living-delta": { lat: 52.0, lng: 4.9, ring: "#74a7a5" },
-  "orne-watershed": { lat: 48.65, lng: -0.15, ring: "#74a7a5" },
-  "mid-vistula-river-valley": { lat: 51.8, lng: 21.5, ring: "#a8a775" },
-  "oltenia-de-sub-munte": { lat: 45.25, lng: 24.35, ring: "#a8a775" },
-  cilento: { lat: 40.25, lng: 15.15, ring: "#bf7a3b" },
-  laconia: { lat: 37.05, lng: 22.4, ring: "#bf7a3b" },
+  // Approximate centre points of each bioregion, refined against real
+  // geography (delta/river basins, watershed centres, valley midpoints).
+  "living-delta": { lat: 51.95, lng: 4.6, ring: "#74a7a5" },
+  "orne-watershed": { lat: 48.55, lng: 0.0, ring: "#74a7a5" },
+  "mid-vistula-river-valley": { lat: 51.85, lng: 21.6, ring: "#a8a775" },
+  "oltenia-de-sub-munte": { lat: 45.2, lng: 24.3, ring: "#a8a775" },
+  cilento: { lat: 40.2, lng: 15.15, ring: "#bf7a3b" },
+  laconia: { lat: 37.05, lng: 22.45, ring: "#bf7a3b" },
 };
 
 /** Default ring colour for bioregions without an explicit entry. */
