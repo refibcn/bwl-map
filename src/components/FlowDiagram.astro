@@ -153,39 +153,35 @@ const sisGap = 16;
 
 const csCards = shifts.map((s, i) => {
   const emoji = s.emoji || "";
-  const nameLines = capLines(wrapToWidth(`${emoji} ${s.name}`.trim(), csW - 48, 12, "display"), 2);
-  const leverageLines = capLines(wrapToWidth(s.leveragePoint || "", csW - 48, 9.5, "body"), 5);
+  // Full database text: names and leverage points are wrapped to the card
+  // width but never truncated with an ellipsis.
+  const nameLines = wrapToWidth(`${emoji} ${s.name}`.trim(), csW - 48, 12, "display");
+  const leverageLines = wrapToWidth(s.leveragePoint || "", csW - 48, 9.5, "body");
   const textHeight = nameLines.length * csNameLineHeight + 4 + leverageLines.length * csLeverageLineHeight;
   const cardHeight = Math.max(64, textHeight + 32);
   return { ...s, nameLines, leverageLines, cardHeight, color: PALETTE[i % PALETTE.length] };
 });
 
-// Uniform SIS cards: the image fills the whole left section (square = card
-// height, full bleed), and ALL cards share one height, so every image renders
-// at exactly the same size with no white borders. The height converges by
-// re-wrapping the text until it stabilizes.
+// SIS cards: a FIXED image square on the left, so the text column keeps a
+// stable width even with full descriptions (the previous square-=-card-height
+// layout squeezed the text to nothing as cards grew). Cards size themselves
+// to their content with the full database text.
+const SIS_IMG = 150; // fixed square image side
 const SIS_TEXT_GAP = 18; // space between the image square and the text
 const SIS_TEXT_RIGHT = 12; // space between the text and the card's right border
-const SIS_MIN_IMG = 104; // minimum square image side (= minimum card height)
+const SIS_MIN_IMG = 104; // minimum card height
 
-let sisCardHeight = SIS_MIN_IMG;
-let sisCards: any[] = [];
-for (let i = 0; i < 5; i++) {
-  sisCards = innovations.map((inv) => {
-    const hasImage = !!resolveImageSource(inv.imageFile, inv.imageUrl);
-    const leftInset = hasImage ? sisCardHeight + SIS_TEXT_GAP : 16;
-    const textX = sisX + leftInset;
-    const textWidth = sisW - leftInset - SIS_TEXT_RIGHT;
-    const nameLines = capLines(wrapToWidth(inv.name || "", textWidth, 12, "display"), 3);
-    const descLines = capLines(wrapToWidth(inv.description || "", textWidth, 9.5, "body"), 6);
-    const textHeight = nameLines.length * sisNameLineHeight + 4 + descLines.length * sisDescLineHeight;
-    return { ...inv, hasImage, nameLines, descLines, textHeight, textX };
-  });
-  const next = Math.max(SIS_MIN_IMG, ...sisCards.map((c) => c.textHeight + 36));
-  if (next === sisCardHeight) break;
-  sisCardHeight = next;
-}
-sisCards = sisCards.map((c) => ({ ...c, cardHeight: sisCardHeight }));
+const sisCards: any[] = innovations.map((inv) => {
+  const hasImage = !!resolveImageSource(inv.imageFile, inv.imageUrl);
+  const leftInset = hasImage ? SIS_IMG + SIS_TEXT_GAP : 16;
+  const textX = sisX + leftInset;
+  const textWidth = sisW - leftInset - SIS_TEXT_RIGHT;
+  const nameLines = wrapToWidth(inv.name || "", textWidth, 12, "display");
+  const descLines = wrapToWidth(inv.description || "", textWidth, 9.5, "body");
+  const textHeight = nameLines.length * sisNameLineHeight + 4 + descLines.length * sisDescLineHeight;
+  const cardHeight = Math.max(SIS_MIN_IMG, textHeight + 36);
+  return { ...inv, hasImage, nameLines, descLines, textHeight, textX, cardHeight };
+});
 
 const csHeight = csCards.reduce((sum, c, i) => sum + c.cardHeight + (i < csCards.length - 1 ? csGap : 0), 0);
 const sisHeight = sisCards.reduce((sum, c, i) => sum + c.cardHeight + (i < sisCards.length - 1 ? sisGap : 0), 0);
@@ -423,8 +419,8 @@ function curve(x1: number, y1: number, x2: number, y2: number, strength = 0.5) {
             <image
               x={sisX}
               y={imgY}
-              width={inv.cardHeight}
-              height={inv.cardHeight}
+              width={SIS_IMG}
+              height={SIS_IMG}
               href={sisImageSrc}
               clip-path="inset(0px round 10px 0 0 10px)"
               preserveAspectRatio="xMidYMid slice"
