@@ -53,10 +53,10 @@ function inWindow([lng, lat]) {
 /** Project one ring (array of [lng, lat]) into SVG path data. */
 function ringToPath(ring, b) {
   let d = "";
-  // Equirectangular with a standard parallel at 45N: longitude is compressed
-  // by cos(45) so Europe keeps its natural proportions (a plain lat/lng plot
-  // stretches it horizontally — the map looked wider than the w1 map).
-  const COS_PHI = Math.cos((45 * Math.PI) / 180);
+  // Equirectangular with a standard parallel: longitude compressed by
+  // cos(34°) — the middle ground between the flat lat/lng plot (map too
+  // wide) and 45° (map too tall), giving Europe natural proportions.
+  const COS_PHI = Math.cos((34 * Math.PI) / 180);
   const xScale = 1000 * COS_PHI;
   const yScale = ((b.latMax - b.latMin) / (b.lngMax - b.lngMin)) * 1000 * (1 / COS_PHI);
   for (let i = 0; i < ring.length; i++) {
@@ -142,7 +142,7 @@ const countries = selected.map((f) => {
 const out = {
   bounds,
   width: 1000,
-  height: Math.round(((bounds.latMax - bounds.latMin) / (bounds.lngMax - bounds.lngMin)) * 1000 * (1 / Math.cos((45 * Math.PI) / 180)) * 10) / 10,
+  height: Math.round(((bounds.latMax - bounds.latMin) / (bounds.lngMax - bounds.lngMin)) * 1000 * (1 / Math.cos((34 * Math.PI) / 180)) * 10) / 10,
   countries,
 };
 
