@@ -2,6 +2,7 @@
 import { getCollection } from "astro:content";
 import BaseLayout from "../../layouts/BaseLayout.astro";
 import SiteNav from "../../components/SiteNav.astro";
+import CriticalShiftsMap from "../../components/CriticalShiftsMap.astro";
 import { buildShiftPages } from "../../lib/shift-pages";
 
 const [bioEntries, shiftEntries] = await Promise.all([
@@ -12,56 +13,17 @@ const shifts = buildShiftPages(
   bioEntries.map((b) => b.data),
   shiftEntries.map((s) => s.data)
 );
-const base = import.meta.env.BASE_URL.endsWith("/") ? import.meta.env.BASE_URL : import.meta.env.BASE_URL + "/";
 ---
 
 <BaseLayout title="Critical shifts — BWL Map">
   <SiteNav current="shifts" />
-  <a class="back-link" href={base} aria-label="Back to the map">← Map</a>
-  <div class="wrap" style="padding-top:4rem;padding-bottom:5rem">
-    <p class="eyebrow">Bioregional Weaving Labs</p>
-    <h1 style="font-size:34px;margin:0.5rem 0 0.25rem">Critical shifts</h1>
-    <p style="margin-bottom:2rem;color:var(--mist)">
-      The systemic shifts the portfolio works on — see which bioregions and innovations address each one.
-    </p>
-    <div style="display:grid;gap:10px">
-      {shifts.map((s) => (
-        <a class="landing-row" href={`${base}critical-shifts/${s.slug}/`}>
-          <span class="name">{s.emoji ? `${s.emoji} ` : ""}{s.name}</span>
-          <span style="display:flex;gap:8px">
-            <span class="badge-soft">{s.bioregions.length} {s.bioregions.length === 1 ? "bioregion" : "bioregions"}</span>
-            <span class="badge-soft">{s.innovations.length} {s.innovations.length === 1 ? "innovation" : "innovations"}</span>
-          </span>
-        </a>
-      ))}
-    </div>
-  </div>
+  <main>
+    <CriticalShiftsMap shifts={shifts} />
+  </main>
 </BaseLayout>
 
-<style>
-  .back-link {
-    position: fixed;
-    top: 16px;
-    left: 16px;
-    z-index: 20;
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 8px 14px;
-    border-radius: 999px;
-    border: 1px solid var(--line-strong);
-    background: var(--paper-raised);
-    color: var(--bwl-primary);
-    font-family: var(--font-body);
-    font-size: 13px;
-    font-weight: 700;
-    text-decoration: none;
-    box-shadow: 0 1px 4px rgba(32, 64, 79, 0.12);
-    transition: background 0.15s ease, border-color 0.15s ease;
-  }
-  .back-link:hover {
-    background: var(--bwl-primary);
-    color: #fff;
-    border-color: var(--bwl-primary);
-  }
+<style is:global>
+  /* Full-bleed landscape: keep the page background the same sky colour as the
+     illustration so overscroll / browser zoom never reveals white around it. */
+  body { background: #a9d5d4; }
 </style>

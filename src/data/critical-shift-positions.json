@@ -1,0 +1,115 @@
+{
+  "image": {
+    "source": "/home/gq/refi-bcn-os/bwl-map/----image-generation-prompt-----a-flat--clean-vect.png",
+    "publicPath": "/bwl-map/critical-shifts-landscape.png",
+    "width": 1024,
+    "height": 572,
+    "aspectRatio": "1024/572"
+  },
+  "positions": [
+    {
+      "slug": "education-knowledge",
+      "name": "Education & Knowledge",
+      "emoji": "📚",
+      "x": 24,
+      "y": 18,
+      "rationale": "Placed on the 'BioRegional Weaving Labs' billboard on the mountain peak — a knowledge/learning anchor."
+    },
+    {
+      "slug": "ecosystems-biodiversity",
+      "name": "Ecosystems & Biodiversity",
+      "emoji": "🌳",
+      "x": 90,
+      "y": 18,
+      "rationale": "Top-right forested hills — the wildest green area in the scene."
+    },
+    {
+      "slug": "policy-advocacy",
+      "name": "Policy & Advocacy",
+      "emoji": "⚖️",
+      "x": 86,
+      "y": 24,
+      "rationale": "Over the tall city / institutional buildings on the right, read as governance."
+    },
+    {
+      "slug": "energy-carbon",
+      "name": "Energy & Carbon",
+      "emoji": "🔆",
+      "x": 70,
+      "y": 28,
+      "rationale": "On the solar array and transmission tower complex in the upper-right quadrant."
+    },
+    {
+      "slug": "finance-ownership",
+      "name": "Finance & Ownership",
+      "emoji": "👛",
+      "x": 84,
+      "y": 30,
+      "rationale": "Near the dense commercial/urban cluster where capital and ownership concentrate."
+    },
+    {
+      "slug": "housing-infrastructure",
+      "name": "Housing & Infrastructure",
+      "emoji": "🏠",
+      "x": 34,
+      "y": 34,
+      "rationale": "Over the compact town / buildings on the left side of the river."
+    },
+    {
+      "slug": "culture-heritage",
+      "name": "Culture & Heritage",
+      "emoji": "🎨",
+      "x": 90,
+      "y": 36,
+      "rationale": "On the amphitheatre / theatre structure on the right — a clear heritage/culture landmark."
+    },
+    {
+      "slug": "community-self-governance",
+      "name": "Community & Self-Governance",
+      "emoji": "🪢",
+      "x": 38,
+      "y": 44,
+      "rationale": "Central town square / gathering area — the social heart of the settlement."
+    },
+    {
+      "slug": "health-social-services",
+      "name": "Health & Social Services",
+      "emoji": "❤️‍🩹",
+      "x": 28,
+      "y": 50,
+      "rationale": "Near the community buildings on the lower-left side of the town."
+    },
+    {
+      "slug": "value-chains-economic-development",
+      "name": "Value Chains & Economic Development",
+      "emoji": "⛓️",
+      "x": 56,
+      "y": 52,
+      "rationale": "Mid-river / market zone where transport, trade and production connect."
+    },
+    {
+      "slug": "food-agriculture",
+      "name": "Food & Agriculture",
+      "emoji": "🍎",
+      "x": 48,
+      "y": 64,
+      "rationale": "Centre of the crop fields, farms and orchards in the middle of the image."
+    },
+    {
+      "slug": "tourism-recreation-hospitality",
+      "name": "Tourism, Recreation & Hospitality",
+      "emoji": "🥾",
+      "x": 10,
+      "y": 72,
+      "rationale": "Over the sailboat / coastal area — recreation and coastal tourism."
+    },
+    {
+      "slug": "youth-opportunities",
+      "name": "Youth & Opportunities",
+      "emoji": "🧒",
+      "x": 58,
+      "y": 12,
+      "rationale": "On the kite flying in the sky — a playful, future-oriented symbol."
+    }
+  ]
+}
