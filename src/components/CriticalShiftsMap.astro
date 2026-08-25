@@ -10,6 +10,7 @@
  */
 import positionsData from "../data/critical-shift-positions.json";
 import { normalizeName } from "../data/map-positions";
+import { shiftColor } from "../lib/shift-pages";
 import type { ShiftPageData } from "../lib/shift-pages";
 
 interface Props {
@@ -25,13 +26,6 @@ type ShiftPosition = (typeof positionsData.positions)[number];
 const bySlug = new Map(positionsData.positions.map((p) => [p.slug, p]));
 const byName = new Map(positionsData.positions.map((p) => [normalizeName(p.name), p]));
 const emojiBySlug = new Map(positionsData.positions.map((p) => [p.slug, p.emoji]));
-
-/** Compact pill label: first chunk of the name ("Value Chains & Economic
- *  Development" -> "Value Chains") so markers stay small on the map. */
-function shortLabel(name: string): string {
-  const first = name.split(/\s*(?:&|,| and )\s*/i)[0]?.trim();
-  return first || name;
-}
 
 // Shifts that have a mapped position get a marker on the landscape; the
 // panel list still shows every shift.
@@ -80,12 +74,12 @@ const positioned = shifts
             <a
               class="cs-marker"
               href={`${base}critical-shifts/${s.slug}/`}
-              style={`--x:${pos.x}%;--y:${pos.y}%;--i:${i}`}
+              style={`--x:${pos.x}%;--y:${pos.y}%;--i:${i};--z:${3 + Math.round(pos.y / 10)};--accent:${shiftColor(s.slug)}`}
               title={s.name}
               aria-label={s.name}
             >
               <span class="cs-marker-emoji" aria-hidden="true">{s.emoji ?? pos.emoji}</span>
-              <span class="cs-marker-name">{shortLabel(s.name)}</span>
+              <span class="cs-marker-name">{s.name}</span>
             </a>
           ))}
         </div>
@@ -349,34 +343,41 @@ const positioned = shifts
     transform: translate(-50%, -50%);
     display: inline-flex;
     align-items: center;
-    gap: 6px;
-    max-width: 32%;
-    padding: 6px 11px;
-    border-radius: 999px;
-    background: rgba(255, 255, 240, 0.95);
-    border: 1px solid rgba(32, 64, 79, 0.28);
-    box-shadow: 0 2px 8px rgba(20, 40, 30, 0.25);
+    gap: 8px;
+    max-width: 200px;
+    padding: 10px 14px;
+    border-radius: 12px;
+    background: rgba(255, 255, 240, 0.97);
+    border: 1px solid rgba(32, 64, 79, 0.3);
+    border-left: 5px solid var(--accent, var(--bwl-secondary));
+    box-shadow: 0 4px 14px rgba(20, 40, 30, 0.28);
     color: #20404f;
     font-family: var(--font-body);
-    font-size: 12px;
-    font-weight: 700;
-    line-height: 1;
-    white-space: nowrap;
+    text-align: left;
     text-decoration: none;
     user-select: none;
-    z-index: 3;
+    /* lower cards on the landscape sit above higher ones, like map pins */
+    z-index: var(--z, 3);
     transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease, background 0.18s ease;
   }
   .cs-marker:hover,
   .cs-marker:focus-visible {
     z-index: 60;
-    transform: translate(-50%, -50%) scale(1.08);
+    transform: translate(-50%, -50%) scale(1.05);
     background: #fff;
     border-color: var(--bwl-secondary);
-    box-shadow: 0 6px 16px rgba(20, 40, 30, 0.35);
+    box-shadow: 0 10px 24px rgba(20, 40, 30, 0.4);
   }
-  .cs-marker-emoji { font-size: 14px; line-height: 1; }
-  .cs-marker-name { overflow: hidden; text-overflow: ellipsis; }
+  .cs-marker-emoji {
+    flex-shrink: 0;
+    font-size: 19px;
+    line-height: 1.2;
+  }
+  .cs-marker-name {
+    font-size: 13px;
+    font-weight: 700;
+    line-height: 1.25;
+  }
 
   /* subtle entrance: fade the scene in, pop markers in order. Both start
      visible by default so the page stays fully usable even without JS. */
@@ -415,9 +416,10 @@ const positioned = shifts
     .cs-reopen { top: 12px; left: 12px; }
   }
 
-  /* on phones, markers shrink to emoji pills so the scene stays readable */
+  /* on phones, cards shrink to emoji chips so the scene stays readable */
   @media (max-width: 560px) {
-    .cs-marker { padding: 5px 8px; gap: 0; }
+    .cs-marker { padding: 8px 10px; gap: 0; }
+    .cs-marker-emoji { font-size: 18px; }
     .cs-marker-name { display: none; }
   }
 </style>
