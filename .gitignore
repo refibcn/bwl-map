@@ -29,3 +29,6 @@ Thumbs.db
 # ide
 .vscode/
 .idea/
+
+# scratch (verification scripts, screenshots)
+temp/

@@ -135,8 +135,6 @@ const positioned = shifts
     background: var(--cs-sky);
   }
 
-  .cs-map * { box-sizing: border-box; margin: 0; padding: 0; }
-
   .cs-layout {
     display: flex;
     align-items: stretch;
@@ -171,9 +169,8 @@ const positioned = shifts
 
   /* -------- side panel (left): title + shift list -------- */
   .cs-panel {
-    flex: 1 1 0;
-    min-width: 320px;
-    max-width: 400px;
+    flex: 1.4 1 0;
+    max-width: 520px;
     position: relative;
     display: flex;
     flex-direction: column;
