@@ -125,7 +125,10 @@ const csX = (i: number) => csStartX + i * (csW + csGap) + csW / 2;
 
 // --- systemic innovations: ONE or TWO horizontal rows ---
 const sisW = 180;
-const sisImgH = 84;
+// 180x135 = 4:3 image box: landscape sources (1.33-1.5) fit with minimal
+// crop; portrait sources (0.75-0.8) keep most of the photo (the old 180x84
+// strip zoomed portraits into a 36%-visible sliver)
+const sisImgH = 135;
 const sisCardH = 176;
 const sisGap = 12;
 
