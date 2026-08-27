@@ -11,17 +11,17 @@
       "slug": "education-knowledge",
       "name": "Education & Knowledge",
       "emoji": "📚",
-      "x": 20,
-      "y": 8,
-      "rationale": "Open sky over the mountain's west shoulder — clear of the BWL billboard."
+      "x": 52,
+      "y": 86,
+      "rationale": "Bottom-centre section, below the crop fields."
     },
     {
       "slug": "ecosystems-biodiversity",
       "name": "Ecosystems & Biodiversity",
       "emoji": "🌳",
-      "x": 90,
-      "y": 18,
-      "rationale": "Top-right forested hills — the wildest green area in the scene."
+      "x": 86,
+      "y": 86,
+      "rationale": "Bottom-right corner — open fields/coast terrace."
     },
     {
       "slug": "policy-advocacy",
@@ -107,9 +107,9 @@
       "slug": "youth-opportunities",
       "name": "Youth & Opportunities",
       "emoji": "🧒",
-      "x": 58,
-      "y": 12,
-      "rationale": "On the kite flying in the sky — a playful, future-oriented symbol."
+      "x": 16,
+      "y": 84,
+      "rationale": "Bottom-left part — by the shoreline, below the sailboat."
     }
   ]
 }

@@ -351,6 +351,14 @@ export function notionBioregionLoader(): Loader {
             const slug = getRichText(i.properties, "URL slug") || slugify(getTitle(i.properties));
             const image = await resolveImage(i.properties, "Files & Media", slug, imagesDir, logger);
             const notionUrl = getUrl(i.properties, "Website") || getUrl(i.properties, "Learn More") || null;
+            // The ↗ icon must ALWAYS point at the BWL page of the systemic
+            // innovation. The composed slug URL is mandatory; a curated
+            // Website/Learn More URL is only honoured when it already is a
+            // bioregionalweavinglabs.org link (some entries point at the
+            // project's own external site, which is not what we want here).
+            const composedUrl = `https://bioregionalweavinglabs.org/systemic-innovations/${slug}`;
+            const curatedBwl =
+              notionUrl && notionUrl.includes("bioregionalweavinglabs.org") ? notionUrl : null;
             return {
               slug,
               name: getTitle(i.properties),
@@ -358,7 +366,7 @@ export function notionBioregionLoader(): Loader {
               tags,
               depth: getCheckbox(i.properties, "Case Study") ? "story" : "core",
               notionUrl,
-              externalUrl: notionUrl || `https://bioregionalweavinglabs.org/systemic-innovations/${slug}`,
+              externalUrl: curatedBwl || composedUrl,
               imageUrl: image.url,
               imageFile: image.file,
             };

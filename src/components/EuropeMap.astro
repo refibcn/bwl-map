@@ -87,8 +87,15 @@ const labelW = (name: string) => name.length * labelFont * 0.62 + labelPad * 2;
             <filter id="bwc-shadow" x="-10%" y="-10%" width="130%" height="140%">
               <feDropShadow dx="0" dy="8" stdDeviation="11" flood-color="#20404f" flood-opacity="0.26" />
             </filter>
+            {/* Clip the land to the visible window BEFORE the shadow filter:
+                otherwise the shadow of land outside the viewBox (the parts
+                cropped by the window) bleeds into the frame and reads as a
+                dark line along the top/right edges. */}
+            <clipPath id="bwc-window-clip">
+              <rect x={VIEW.x} y={VIEW.y} width={VIEW.w} height={VIEW.h} />
+            </clipPath>
           </defs>
-          <g class="land" filter="url(#bwc-shadow)">
+          <g class="land" filter="url(#bwc-shadow)" clip-path="url(#bwc-window-clip)">
             {paths.map((d) => <path d={d} />)}
           </g>
 
@@ -104,25 +111,30 @@ const labelW = (name: string) => name.length * labelFont * 0.62 + labelPad * 2;
                 <g transform={`translate(${r.cx.toFixed(1)} ${r.cy.toFixed(1)})`} class="bwc-marker-inner">
                   {img ? (
                     <g class="bwc-ring">
-                      <circle r="17" fill="rgba(255,255,255,0.92)" />
                       <clipPath id={`clip-${r.slug}`}>
-                        <circle r="15.5" />
+                        <circle r="17" />
                       </clipPath>
                       <image
                         href={img}
-                        x="-15.5"
-                        y="-15.5"
-                        width="31"
-                        height="31"
+                        x="-17"
+                        y="-17"
+                        width="34"
+                        height="34"
                         clip-path={`url(#clip-${r.slug})`}
                         preserveAspectRatio="xMidYMid slice"
                       />
-                      <circle r="17" fill="none" stroke="var(--ring, #c9762b)" stroke-width="3" />
+                      {/* previous-marker look: white band around the photo,
+                          then the region-coloured ring outside it */}
+                      <circle r="17" fill="none" stroke="rgba(255,255,255,0.92)" stroke-width="3.5" />
+                      <circle r="20.8" fill="none" stroke="var(--ring, #c9762b)" stroke-width="5" />
                     </g>
                   ) : (
-                    <circle class="bwc-dot" r="10" fill="var(--ring, #c9762b)" />
+                    <g class="bwc-dot">
+                      <circle r="15" fill="var(--ring, #c9762b)" />
+                      <circle r="18.5" fill="none" stroke="rgba(255,255,255,0.92)" stroke-width="3.5" />
+                    </g>
                   )}
-                  <g class="bwc-label" transform={`translate(${-labelW(r.name) / 2} ${26})`}>
+                  <g class="bwc-label" transform={`translate(${-labelW(r.name) / 2} ${30})`}>
                     <rect width={labelW(r.name)} height={labelFont + labelPad * 1.4} rx={labelFont / 2 + 4} fill="var(--ring, #c9762b)" />
                     <text
                       x={labelW(r.name) / 2}
@@ -252,7 +264,8 @@ const labelW = (name: string) => name.length * labelFont * 0.62 + labelPad * 2;
     background: rgba(255, 255, 255, 0.55);
     border: 1px solid rgba(255, 255, 255, 0.7);
     border-radius: 6px;
-    padding: 8px 12px;
+    /* left padding 0: the sentence starts exactly under the title */
+    padding: 8px 12px 8px 0;
   }
   .bio-divider {
     height: 1px;
@@ -320,27 +333,25 @@ const labelW = (name: string) => name.length * labelFont * 0.62 + labelPad * 2;
     padding: 5px 12px;
   }
 
-  /* -------- markers (inside the SVG, same coordinates as the land) -------- */
   .bwc-marker {
     cursor: pointer;
-    opacity: 0;
     z-index: 3;
     outline: none;
   }
   .bwc-marker:hover,
   .bwc-marker:focus-visible { z-index: 60; }
 
-  .bwc-ring,
+  .bwc-ring {
+    transition: transform 0.25s ease;
+  }
   .bwc-dot {
-    transform-box: fill-box;
-    transform-origin: center;
     transition: transform 0.25s ease;
   }
   .bwc-marker:hover .bwc-ring,
   .bwc-marker:focus-visible .bwc-ring,
   .bwc-marker:hover .bwc-dot,
   .bwc-marker:focus-visible .bwc-dot {
-    transform: scale(1.15);
+    transform: scale(1.12);
   }
 
   .bwc-label {
@@ -351,26 +362,29 @@ const labelW = (name: string) => name.length * labelFont * 0.62 + labelPad * 2;
     text-transform: uppercase;
   }
 
-  /* -------- entrance animations (fade only — the map never scales, so the
-     markers stay glued to the land at every zoom level) -------- */
+  /* -------- entrance animations: pop-in like the previous marker version -------- */
   .bwc-hero.is-loaded .bwc-map {
     animation: bwc-map-in 1.2s ease forwards;
   }
-  .bwc-marker {
-    animation: bwc-pop 0.6s cubic-bezier(0.2, 0.9, 0.3, 1.4) forwards;
-    animation-delay: calc(0.8s + var(--i, 0) * 0.12s);
+  .bwc-marker-inner {
+    opacity: 0;
+    transform-box: fill-box;
+    transform-origin: center;
+    animation: bwc-pop 0.55s cubic-bezier(0.2, 0.9, 0.3, 1.4) backwards;
+    animation-delay: calc(0.7s + var(--i, 0) * 0.12s);
   }
   @keyframes bwc-map-in { to { opacity: 1; } }
   @keyframes bwc-pop {
-    0% { opacity: 0; }
-    70% { opacity: 1; }
-    100% { opacity: 1; }
+    0% { opacity: 0; transform: scale(0.4); }
+    70% { opacity: 1; transform: scale(1.08); }
+    100% { opacity: 1; transform: scale(1); }
   }
 
   @media (prefers-reduced-motion: reduce) {
     .bwc-hero * { animation: none !important; }
     .bwc-map { opacity: 1 !important; }
     .bwc-marker { opacity: 1 !important; }
+    .bwc-marker-inner { transform: scale(1) !important; }
   }
 
   /* -------- responsive -------- */
