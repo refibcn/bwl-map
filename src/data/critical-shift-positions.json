@@ -43,9 +43,9 @@
       "slug": "finance-ownership",
       "name": "Finance & Ownership",
       "emoji": "👛",
-      "x": 88,
-      "y": 58,
-      "rationale": "Calm coastal/field terrace south-east of the city — flat open area."
+      "x": 86,
+      "y": 62,
+      "rationale": "Calm coastal/field terrace south-east of the city — kept clear of the community card above."
     },
     {
       "slug": "housing-infrastructure",
@@ -67,9 +67,9 @@
       "slug": "community-self-governance",
       "name": "Community & Self-Governance",
       "emoji": "🪢",
-      "x": 78,
-      "y": 48,
-      "rationale": "Flat olive band east of the town, below the city — open ground."
+      "x": 74,
+      "y": 46,
+      "rationale": "Flat olive band east of the town — open ground with room around it."
     },
     {
       "slug": "health-social-services",
