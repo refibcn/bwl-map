@@ -303,29 +303,31 @@ function ortho(x1: number, y1: number, x2: number, y2: number) {
       />
     </g>
 
-    {/* Critical shift cards (one row) */}
+    {/* Critical shift cards (one row) — clickable, like the horizontal view */}
     {csCards.map((s, i) => {
       const x = csStartX + i * (csW + csGap);
       const nameY = csTop + 12 + 14 * 0.8;
       const leverageY = nameY + s.nameLines.length * 14 + 3;
       return (
-        <g class={`card cs-card cs-${s.slug}`} data-el={`cs:${s.slug}`} tabindex="0">
-          <rect x={x} y={csTop} width={csW} height={csH} rx="10" fill="var(--paper-raised)" stroke={s.color} stroke-width="2" filter="url(#softShadow)" />
-          <SVGTextBlock
-            lines={s.nameLines}
-            x={x + 12}
-            y={nameY}
-            lineHeight="1.2em"
+        <a class="card-link" href={`${base}critical-shifts/${s.slug}/`}>
+          <g class={`card cs-card cs-${s.slug}`} data-el={`cs:${s.slug}`} tabindex="0">
+            <rect x={x} y={csTop} width={csW} height={csH} rx="10" fill="var(--paper-raised)" stroke={s.color} stroke-width="2" filter="url(#softShadow)" />
+            <SVGTextBlock
+              lines={s.nameLines}
+              x={x + 12}
+              y={nameY}
+              lineHeight="1.2em"
             style="font-family:var(--font-display);font-size:12px;font-weight:bold;fill:var(--bwl-primary);"
           />
-          <SVGTextBlock
-            lines={s.leverageLines}
-            x={x + 12}
-            y={leverageY}
-            lineHeight="1.3em"
-            style="font-family:var(--font-body);font-size:8.5px;fill:var(--bwl-text);opacity:0.85;"
-          />
-        </g>
+            <SVGTextBlock
+              lines={s.leverageLines}
+              x={x + 12}
+              y={leverageY}
+              lineHeight="1.3em"
+              style="font-family:var(--font-body);font-size:8.5px;fill:var(--bwl-text);opacity:0.85;"
+            />
+          </g>
+        </a>
       );
     })}
 
