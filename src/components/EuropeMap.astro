@@ -1,20 +1,27 @@
 ---
 /**
- * BWL map landing — w1-style Europe map with clickable region markers (photo
- * circles, no pop-ups) and a permanent left side panel holding the brand
- * block (eyebrow + title) and the bioregion list.
+ * BWL map landing — w1-style Europe map with clickable region markers and a
+ * permanent left side panel holding the brand block (eyebrow + title) and
+ * the bioregion list.
  *
  * Map framing: the projection canvas (europe-map.json) covers all of Europe;
  * we show a WINDOW of it (viewBox "110 180 620 470") that frames the six
  * bioregion markers with sea/padding and an aspect ratio (~1.32) close to
  * the typical stage column. The stage fills its column completely and the
  * SVG uses "slice" — so any cropping happens at the page borders, like a
- * normal map, and the markers (drawn inside the SVG, in the same projected
- * coordinates as the land) are always glued to their spots.
+ * normal map.
  *
- * On narrow screens (<1480px) the layout stacks (map first, panel below,
- * per mobile preference): the stage switches to the window's own aspect
- * ratio, so the full framed map is shown without cropping.
+ * Markers are the ORIGINAL HTML overlay version (photo in a ringed circle,
+ * region-coloured rings, name pill, pop-in entrance). Because the slice
+ * crop shifts the visible part of the map, a small script converts each
+ * marker's map-window coordinates (data-wx/data-wy) into stage percentages
+ * on load and resize — they stay glued to the land at every screen size.
+ * The base style is "visible": the entrance animation lives in keyframes
+ * only (fill-mode both), so markers can never disappear.
+ *
+ * On narrow screens (<1480px) the layout stacks (map first, panel below):
+ * the stage switches to the window's own aspect ratio — no crop, and the
+ * positioning script degrades to the plain percentages.
  */
 import europeMap from "../data/europe-map.json";
 import { notionImageUrl } from "../lib/images";
@@ -38,17 +45,13 @@ const paths = [...new Set(europeMap.countries.flatMap((c) => c.d))];
  *  (Orne 16%..Oltenia 88%), and screens below 1480px stack (no crop at all). */
 const VIEW = { x: 110, y: 180, w: 620, h: 470 };
 
-// Markers keep their projected canvas coordinates (r.x/r.y are percentages
-// of the canvas) — they render inside the SVG, so slice-cropping the map
-// crops them exactly with the land.
+// Markers: window-relative coordinates (0..VIEW.w / 0..VIEW.h), used by the
+// positioning script to place them on top of the slice-fitted map.
 const markers = regions.map((r) => ({
   ...r,
-  cx: (r.x / 100) * W,
-  cy: (r.y / 100) * H,
+  wx: (r.x / 100) * W - VIEW.x,
+  wy: (r.y / 100) * H - VIEW.y,
 }));
-const labelFont = 11.5; // canvas units — pill text height
-const labelPad = 8;
-const labelW = (name: string) => name.length * labelFont * 0.62 + labelPad * 2;
 ---
 
 <div class="bwc-hero" id="bwcHero">
@@ -75,7 +78,7 @@ const labelW = (name: string) => name.length * labelFont * 0.62 + labelPad * 2;
     </aside>
 
     <div class="bwc-stage-col">
-      <div class="bwc-stage">
+      <div class="bwc-stage" data-view-w={VIEW.w} data-view-h={VIEW.h}>
         <svg
           class="bwc-map"
           viewBox={`${VIEW.x} ${VIEW.y} ${VIEW.w} ${VIEW.h}`}
@@ -83,14 +86,12 @@ const labelW = (name: string) => name.length * labelFont * 0.62 + labelPad * 2;
           aria-label="Map of Europe with bioregion markers"
           preserveAspectRatio="xMidYMid slice"
         >
-          <defs>
-            {/* no land shadow: the map runs edge-to-edge, and a drop shadow
-                at the cropped window edges reads as a border line */}
-          </defs>
           <g class="land">
             {paths.map((d) => <path d={d} />)}
           </g>
+        </svg>
 
+        <div class="bwc-markers">
           {markers.map((r, i) => {
             const img = notionImageUrl(r.imageFile) ?? r.imageUrl ?? undefined;
             return (
@@ -98,57 +99,20 @@ const labelW = (name: string) => name.length * labelFont * 0.62 + labelPad * 2;
                 class="bwc-marker"
                 href={`${base}bioregions/${r.slug}/`}
                 style={`--ring:${r.ring};--i:${i}`}
+                data-wx={r.wx.toFixed(1)}
+                data-wy={r.wy.toFixed(1)}
                 aria-label={r.name}
               >
-                {/* outer group: static position ONLY (attribute transform —
-                    never touched by CSS, so markers stay glued to the land) */}
-                <g transform={`translate(${r.cx.toFixed(1)} ${r.cy.toFixed(1)})`}>
-                  {/* inner group: CSS animations/hover only (no attribute
-                      transform — a CSS transform would override it) */}
-                  <g class="bwc-marker-inner">
-                    {img ? (
-                      <g class="bwc-ring">
-                        <clipPath id={`clip-${r.slug}`}>
-                          <circle r="17" />
-                        </clipPath>
-                        <image
-                          href={img}
-                          x="-17"
-                          y="-17"
-                          width="34"
-                          height="34"
-                          clip-path={`url(#clip-${r.slug})`}
-                          preserveAspectRatio="xMidYMid slice"
-                        />
-                        {/* previous-marker look: white band around the photo,
-                            then the region-coloured ring outside it */}
-                        <circle r="17" fill="none" stroke="rgba(255,255,255,0.92)" stroke-width="3.5" />
-                        <circle r="20.8" fill="none" stroke="var(--ring, #c9762b)" stroke-width="5" />
-                      </g>
-                    ) : (
-                      <g class="bwc-dot">
-                        <circle r="15" fill="var(--ring, #c9762b)" />
-                        <circle r="18.5" fill="none" stroke="rgba(255,255,255,0.92)" stroke-width="3.5" />
-                      </g>
-                    )}
-                    <g class="bwc-label" transform={`translate(${-labelW(r.name) / 2} ${30})`}>
-                      <rect width={labelW(r.name)} height={labelFont + labelPad * 1.4} rx={labelFont / 2 + 4} fill="var(--ring, #c9762b)" />
-                      <text
-                        x={labelW(r.name) / 2}
-                        y={labelFont + labelPad * 0.72}
-                        text-anchor="middle"
-                        font-size={labelFont}
-                        font-weight="700"
-                        letter-spacing="0.05em"
-                        fill="#fffff0"
-                      >{r.name}</text>
-                    </g>
-                  </g>
-                </g>
+                {img ? (
+                  <span class="bwc-ring-img"><img src={img} alt="" loading="lazy" /></span>
+                ) : (
+                  <span class="bwc-dot"></span>
+                )}
+                <span class="bwc-label">{r.name}</span>
               </a>
             );
           })}
-        </svg>
+        </div>
       </div>
     </div>
   </div>
@@ -162,6 +126,46 @@ const labelW = (name: string) => name.length * labelFont * 0.62 + labelPad * 2;
   }
   if (document.readyState === "complete") requestAnimationFrame(play);
   else window.addEventListener("load", () => requestAnimationFrame(play));
+
+  // ---- marker glue: place the HTML markers on the slice-fitted map ----
+  // The SVG viewBox is the map window (VIEW); the stage fills its column and
+  // the SVG slice-crops to cover it. The visible portion of the window is a
+  // centred sub-rectangle whose size depends on the stage's live aspect:
+  //   stage aspect >= window aspect -> full width, vertical crop
+  //   stage aspect <  window aspect -> full height, horizontal crop
+  // We convert each marker's window coordinates into stage percentages.
+  const stage = hero?.querySelector<HTMLElement>(".bwc-stage");
+  const markers = hero?.querySelectorAll<HTMLElement>(".bwc-marker");
+  const viewW = Number(stage?.dataset.viewW ?? 620);
+  const viewH = Number(stage?.dataset.viewH ?? 470);
+  const viewAspect = viewW / viewH;
+
+  function placeMarkers() {
+    if (!stage || !markers || !markers.length) return;
+    const rect = stage.getBoundingClientRect();
+    if (!rect.width || !rect.height) return;
+    const sAspect = rect.width / rect.height;
+    let cropL = 0;
+    let cropT = 0;
+    let visW = viewW;
+    let visH = viewH;
+    if (sAspect >= viewAspect) {
+      visH = viewW / sAspect; // vertical crop
+      cropT = (viewH - visH) / 2;
+    } else {
+      visW = viewH * sAspect; // horizontal crop
+      cropL = (viewW - visW) / 2;
+    }
+    markers.forEach((m) => {
+      const wx = parseFloat(m.dataset.wx || "0");
+      const wy = parseFloat(m.dataset.wy || "0");
+      m.style.setProperty("--x", (((wx - cropL) / visW) * 100).toFixed(3) + "%");
+      m.style.setProperty("--y", (((wy - cropT) / visH) * 100).toFixed(3) + "%");
+    });
+  }
+  placeMarkers();
+  window.addEventListener("resize", placeMarkers);
+  window.addEventListener("load", placeMarkers);
 </script>
 
 <style>
@@ -331,58 +335,114 @@ const labelW = (name: string) => name.length * labelFont * 0.62 + labelPad * 2;
     padding: 5px 12px;
   }
 
+  /* -------- markers: the ORIGINAL overlay version (photo in a ringed
+     circle, region ring, name pill). The base style is VISIBLE — the
+     entrance animation only lives inside keyframes (fill both), so the
+     markers can never disappear even if the animation never runs. -------- */
+  .bwc-markers { position: absolute; inset: 0; }
+
   .bwc-marker {
+    position: absolute;
+    left: var(--x);
+    top: var(--y);
+    width: var(--hit, 4.2%);
+    aspect-ratio: 1/1;
+    transform: translate(-50%, -50%);
+    display: block;
+    text-decoration: none;
     cursor: pointer;
+    opacity: 1;
     z-index: 3;
-    outline: none;
   }
   .bwc-marker:hover,
-  .bwc-marker:focus-visible { z-index: 60; }
+  .bwc-marker:focus-within { z-index: 60; }
 
-  .bwc-ring {
+  .bwc-ring-img {
+    position: absolute;
+    inset: 10%;
+    border-radius: 50%;
+    overflow: hidden;
+    box-shadow:
+      0 0 0 3px rgba(255, 255, 255, 0.9),
+      0 0 0 6px var(--ring, #c9762b),
+      0 3px 10px rgba(32, 64, 79, 0.4);
     transition: transform 0.25s ease;
   }
+  .bwc-ring-img img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+  .bwc-marker:hover .bwc-ring-img,
+  .bwc-marker:focus-visible .bwc-ring-img {
+    transform: scale(1.15);
+  }
+
   .bwc-dot {
+    position: absolute;
+    inset: 16%;
+    border-radius: 50%;
+    background: var(--ring, #c9762b);
+    box-shadow:
+      inset 0 2px 3px rgba(255, 255, 255, 0.35),
+      0 2px 8px rgba(32, 64, 79, 0.35);
     transition: transform 0.25s ease;
   }
-  .bwc-marker:hover .bwc-ring,
-  .bwc-marker:focus-visible .bwc-ring,
   .bwc-marker:hover .bwc-dot,
   .bwc-marker:focus-visible .bwc-dot {
-    transform: scale(1.12);
+    transform: scale(1.18);
   }
 
+  /* name label pill under each marker */
   .bwc-label {
-    pointer-events: none;
-  }
-  .bwc-label text {
+    position: absolute;
+    top: calc(100% + 3px);
+    left: 50%;
+    transform: translateX(-50%);
     font-family: var(--bwc-font-body);
+    font-size: clamp(8px, 0.62vw, 11px);
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    line-height: 1.15;
+    text-align: center;
     text-transform: uppercase;
+    white-space: nowrap;
+    color: var(--bwc-label-text, #fffff0);
+    background: var(--ring, #c9762b);
+    padding: 4px 7px;
+    border-radius: 5px;
+    box-shadow: 0 3px 8px var(--bwc-shadow);
+    pointer-events: none;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+  }
+  .bwc-marker:hover .bwc-label,
+  .bwc-marker:focus-visible .bwc-label {
+    box-shadow: 0 6px 14px var(--bwc-shadow);
+    transform: translateX(-50%) translateY(1px);
   }
 
-  /* -------- entrance animations: pop-in like the previous marker version -------- */
+  /* -------- entrance animations (fade for the map, pop for markers).
+     Base styles are visible; the is-loaded rules only ADD the animation,
+     and `both` holds the final keyframe — no disappearance possible. -------- */
   .bwc-hero.is-loaded .bwc-map {
     animation: bwc-map-in 1.2s ease forwards;
   }
-  .bwc-marker-inner {
-    opacity: 0;
-    transform-box: fill-box;
-    transform-origin: center;
-    animation: bwc-pop 0.55s cubic-bezier(0.2, 0.9, 0.3, 1.4) backwards;
-    animation-delay: calc(0.7s + var(--i, 0) * 0.12s);
+  .bwc-hero.is-loaded .bwc-marker {
+    animation: bwc-pop 0.6s cubic-bezier(0.2, 0.9, 0.3, 1.4) both;
+    animation-delay: calc(0.8s + var(--i) * 0.12s);
   }
   @keyframes bwc-map-in { to { opacity: 1; } }
   @keyframes bwc-pop {
-    0% { opacity: 0; transform: scale(0.4); }
-    70% { opacity: 1; transform: scale(1.08); }
-    100% { opacity: 1; transform: scale(1); }
+    0% { opacity: 0; transform: translate(-50%, -50%) scale(0.4); }
+    70% { opacity: 1; transform: translate(-50%, -50%) scale(1.1); }
+    100% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
   }
 
   @media (prefers-reduced-motion: reduce) {
     .bwc-hero * { animation: none !important; }
-    .bwc-map { opacity: 1 !important; }
-    .bwc-marker { opacity: 1 !important; }
-    .bwc-marker-inner { opacity: 1 !important; transform: none !important; }
+    .bwc-map, .bwc-marker { opacity: 1 !important; }
+    .bwc-marker { transform: translate(-50%, -50%) !important; }
   }
 
   /* -------- responsive -------- */
@@ -394,5 +454,6 @@ const labelW = (name: string) => name.length * labelFont * 0.62 + labelPad * 2;
     .bwc-stage-col { flex: none; width: 100%; }
     .bwc-stage { aspect-ratio: 620 / 470; height: auto; max-height: none; }
     .bio-panel { flex: none; max-width: none; width: 100%; }
+    .bwc-marker { width: var(--hit-m, 6%); }
   }
 </style>
