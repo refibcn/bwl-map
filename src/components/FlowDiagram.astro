@@ -263,7 +263,7 @@ function curve(x1: number, y1: number, x2: number, y2: number, strength = 0.5) {
       </clipPath>
       {innovPositions.map((inv) => (
         <clipPath id={`clip-${inv.slug}`}>
-          <rect x={sisX} y={inv.y - inv.cardHeight / 2} width={SIS_IMG} height={SIS_IMG} rx="10" />
+          <rect x={sisX} y={inv.y - inv.cardHeight / 2} width={SIS_IMG} height={inv.cardHeight} rx="10" />
         </clipPath>
       ))}
     </defs>
@@ -438,7 +438,7 @@ function curve(x1: number, y1: number, x2: number, y2: number, strength = 0.5) {
               x={sisX}
               y={imgY}
               width={SIS_IMG}
-              height={SIS_IMG}
+              height={inv.cardHeight}
               href={sisImageSrc}
               clip-path={`url(#clip-${inv.slug})`}
               preserveAspectRatio="xMidYMid slice"

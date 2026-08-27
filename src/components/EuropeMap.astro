@@ -95,12 +95,14 @@ const markers = regions.map((r) => ({
                 the edges — the land visually dissolves into the ocean.
                 Top: 5.5% of the window height; right: 4.5% of its width. */}
             <linearGradient id="bwc-top-sea" gradientUnits="userSpaceOnUse" x1="0" y1={VIEW.y} x2="0" y2={VIEW.y + VIEW.h * 0.055}>
-              <stop offset="0" stopColor="#8da5af" stopOpacity="1" />
-              <stop offset="1" stopColor="#8da5af" stopOpacity="0" />
+              {/* NOTE: stop attributes MUST be hyphenated (stop-color/stop-opacity);
+                  the camelCase stopColor/stopOpacity is not adjusted and renders black */}
+              <stop offset="0" stop-color="#8da5af" stop-opacity="1" />
+              <stop offset="1" stop-color="#8da5af" stop-opacity="0" />
             </linearGradient>
             <linearGradient id="bwc-right-sea" gradientUnits="userSpaceOnUse" x1={VIEW.x + VIEW.w} y1="0" x2={VIEW.x + VIEW.w - VIEW.w * 0.045} y2="0">
-              <stop offset="0" stopColor="#8da5af" stopOpacity="1" />
-              <stop offset="1" stopColor="#8da5af" stopOpacity="0" />
+              <stop offset="0" stop-color="#8da5af" stop-opacity="1" />
+              <stop offset="1" stop-color="#8da5af" stop-opacity="0" />
             </linearGradient>
           </defs>
           <g class="land">
