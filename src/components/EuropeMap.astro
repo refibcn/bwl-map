@@ -160,12 +160,12 @@ const paths = [...new Set(europeMap.countries.flatMap((c) => c.d))];
   .land path { fill: var(--bwc-land); }
 
   /* -------- side panel (left): brand block + bioregion list -------- */
-  /* Spacing mirrors the critical-shifts panel: 32px panel sides, 14px list
-     container, so the cards sit close to the panel border. */
+  /* Mirrors the critical-shifts panel (CriticalShiftsMap.astro): same width
+     (max 520px), 32px panel sides, 14px list container, 8px row gap — the
+     cards sit close to the panel border, like the eyebrow's own inset. */
   .bio-panel {
-    flex: 1 1 0;
-    min-width: 320px;
-    max-width: 400px;
+    flex: 1.4 1 0;
+    max-width: 520px;
     position: relative;
     display: flex;
     flex-direction: column;
@@ -173,7 +173,7 @@ const paths = [...new Set(europeMap.countries.flatMap((c) => c.d))];
     background: var(--bwc-card-bg);
     border: 1px solid rgba(32, 64, 79, 0.18);
     border-radius: 18px;
-    padding: 28px 32px 36px;
+    padding: 28px 32px 32px;
     box-shadow: 0 18px 40px var(--bwc-shadow);
   }
   .bio-eyebrow {
@@ -239,7 +239,7 @@ const paths = [...new Set(europeMap.countries.flatMap((c) => c.d))];
     align-items: center;
     gap: 12px;
     min-height: 52px;
-    padding: 12px 16px;
+    padding: 10px 12px;
     background: #fffff0;
     border: 1px solid rgba(32, 64, 79, 0.12);
     border-radius: 10px;
