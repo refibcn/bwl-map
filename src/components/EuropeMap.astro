@@ -86,8 +86,34 @@ const markers = regions.map((r) => ({
           aria-label="Map of Europe with bioregion markers"
           preserveAspectRatio="xMidYMid slice"
         >
-          <g class="land">
-            {paths.map((d) => <path d={d} />)}
+          <defs>
+            {/* Land-edge fade: the map window cuts through land at its top
+                (northern England/Germany) and right (Ukraine) edges, which
+                renders as a straight 'line border'. These masks dissolve the
+                land into the sea (the page background) right before the
+                edges — no straight cut, no separator. Top: 5.5% of the
+                window height; right: 4.5% of the window width. */}
+            <linearGradient id="bwc-top-fade" gradientUnits="userSpaceOnUse" x1="0" y1={VIEW.y} x2="0" y2={VIEW.y + VIEW.h * 0.055}>
+              <stop offset="0" stopColor="#fff" stopOpacity="0" />
+              <stop offset="1" stopColor="#fff" stopOpacity="1" />
+            </linearGradient>
+            <mask id="bwc-mask-top" maskUnits="userSpaceOnUse" x={VIEW.x} y={VIEW.y} width={VIEW.w} height={VIEW.h}>
+              <rect x={VIEW.x} y={VIEW.y} width={VIEW.w} height={VIEW.h} fill="url(#bwc-top-fade)" />
+            </mask>
+            <linearGradient id="bwc-right-fade" gradientUnits="userSpaceOnUse" x1={VIEW.x + VIEW.w} y1="0" x2={VIEW.x + VIEW.w - VIEW.w * 0.045} y2="0">
+              <stop offset="0" stopColor="#fff" stopOpacity="0" />
+              <stop offset="1" stopColor="#fff" stopOpacity="1" />
+            </linearGradient>
+            <mask id="bwc-mask-right" maskUnits="userSpaceOnUse" x={VIEW.x} y={VIEW.y} width={VIEW.w} height={VIEW.h}>
+              <rect x={VIEW.x} y={VIEW.y} width={VIEW.w} height={VIEW.h} fill="url(#bwc-right-fade)" />
+            </mask>
+          </defs>
+          <g mask="url(#bwc-mask-top)">
+            <g mask="url(#bwc-mask-right)">
+              <g class="land">
+                {paths.map((d) => <path d={d} />)}
+              </g>
+            </g>
           </g>
         </svg>
 
@@ -345,7 +371,7 @@ const markers = regions.map((r) => ({
     position: absolute;
     left: var(--x);
     top: var(--y);
-    width: var(--hit, 4.2%);
+    width: var(--hit, 4.6%);
     aspect-ratio: 1/1;
     transform: translate(-50%, -50%);
     display: block;
@@ -454,6 +480,6 @@ const markers = regions.map((r) => ({
     .bwc-stage-col { flex: none; width: 100%; }
     .bwc-stage { aspect-ratio: 620 / 470; height: auto; max-height: none; }
     .bio-panel { flex: none; max-width: none; width: 100%; }
-    .bwc-marker { width: var(--hit-m, 6%); }
+    .bwc-marker { width: var(--hit-m, 6.6%); }
   }
 </style>
