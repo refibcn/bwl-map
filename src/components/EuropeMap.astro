@@ -84,18 +84,10 @@ const labelW = (name: string) => name.length * labelFont * 0.62 + labelPad * 2;
           preserveAspectRatio="xMidYMid slice"
         >
           <defs>
-            <filter id="bwc-shadow" x="-10%" y="-10%" width="130%" height="140%">
-              <feDropShadow dx="0" dy="8" stdDeviation="11" flood-color="#20404f" flood-opacity="0.26" />
-            </filter>
-            {/* Clip the land to the visible window BEFORE the shadow filter:
-                otherwise the shadow of land outside the viewBox (the parts
-                cropped by the window) bleeds into the frame and reads as a
-                dark line along the top/right edges. */}
-            <clipPath id="bwc-window-clip">
-              <rect x={VIEW.x} y={VIEW.y} width={VIEW.w} height={VIEW.h} />
-            </clipPath>
+            {/* no land shadow: the map runs edge-to-edge, and a drop shadow
+                at the cropped window edges reads as a border line */}
           </defs>
-          <g class="land" filter="url(#bwc-shadow)" clip-path="url(#bwc-window-clip)">
+          <g class="land">
             {paths.map((d) => <path d={d} />)}
           </g>
 
@@ -108,43 +100,49 @@ const labelW = (name: string) => name.length * labelFont * 0.62 + labelPad * 2;
                 style={`--ring:${r.ring};--i:${i}`}
                 aria-label={r.name}
               >
-                <g transform={`translate(${r.cx.toFixed(1)} ${r.cy.toFixed(1)})`} class="bwc-marker-inner">
-                  {img ? (
-                    <g class="bwc-ring">
-                      <clipPath id={`clip-${r.slug}`}>
-                        <circle r="17" />
-                      </clipPath>
-                      <image
-                        href={img}
-                        x="-17"
-                        y="-17"
-                        width="34"
-                        height="34"
-                        clip-path={`url(#clip-${r.slug})`}
-                        preserveAspectRatio="xMidYMid slice"
-                      />
-                      {/* previous-marker look: white band around the photo,
-                          then the region-coloured ring outside it */}
-                      <circle r="17" fill="none" stroke="rgba(255,255,255,0.92)" stroke-width="3.5" />
-                      <circle r="20.8" fill="none" stroke="var(--ring, #c9762b)" stroke-width="5" />
+                {/* outer group: static position ONLY (attribute transform —
+                    never touched by CSS, so markers stay glued to the land) */}
+                <g transform={`translate(${r.cx.toFixed(1)} ${r.cy.toFixed(1)})`}>
+                  {/* inner group: CSS animations/hover only (no attribute
+                      transform — a CSS transform would override it) */}
+                  <g class="bwc-marker-inner">
+                    {img ? (
+                      <g class="bwc-ring">
+                        <clipPath id={`clip-${r.slug}`}>
+                          <circle r="17" />
+                        </clipPath>
+                        <image
+                          href={img}
+                          x="-17"
+                          y="-17"
+                          width="34"
+                          height="34"
+                          clip-path={`url(#clip-${r.slug})`}
+                          preserveAspectRatio="xMidYMid slice"
+                        />
+                        {/* previous-marker look: white band around the photo,
+                            then the region-coloured ring outside it */}
+                        <circle r="17" fill="none" stroke="rgba(255,255,255,0.92)" stroke-width="3.5" />
+                        <circle r="20.8" fill="none" stroke="var(--ring, #c9762b)" stroke-width="5" />
+                      </g>
+                    ) : (
+                      <g class="bwc-dot">
+                        <circle r="15" fill="var(--ring, #c9762b)" />
+                        <circle r="18.5" fill="none" stroke="rgba(255,255,255,0.92)" stroke-width="3.5" />
+                      </g>
+                    )}
+                    <g class="bwc-label" transform={`translate(${-labelW(r.name) / 2} ${30})`}>
+                      <rect width={labelW(r.name)} height={labelFont + labelPad * 1.4} rx={labelFont / 2 + 4} fill="var(--ring, #c9762b)" />
+                      <text
+                        x={labelW(r.name) / 2}
+                        y={labelFont + labelPad * 0.72}
+                        text-anchor="middle"
+                        font-size={labelFont}
+                        font-weight="700"
+                        letter-spacing="0.05em"
+                        fill="#fffff0"
+                      >{r.name}</text>
                     </g>
-                  ) : (
-                    <g class="bwc-dot">
-                      <circle r="15" fill="var(--ring, #c9762b)" />
-                      <circle r="18.5" fill="none" stroke="rgba(255,255,255,0.92)" stroke-width="3.5" />
-                    </g>
-                  )}
-                  <g class="bwc-label" transform={`translate(${-labelW(r.name) / 2} ${30})`}>
-                    <rect width={labelW(r.name)} height={labelFont + labelPad * 1.4} rx={labelFont / 2 + 4} fill="var(--ring, #c9762b)" />
-                    <text
-                      x={labelW(r.name) / 2}
-                      y={labelFont + labelPad * 0.72}
-                      text-anchor="middle"
-                      font-size={labelFont}
-                      font-weight="700"
-                      letter-spacing="0.05em"
-                      fill="#fffff0"
-                    >{r.name}</text>
                   </g>
                 </g>
               </a>
@@ -384,7 +382,7 @@ const labelW = (name: string) => name.length * labelFont * 0.62 + labelPad * 2;
     .bwc-hero * { animation: none !important; }
     .bwc-map { opacity: 1 !important; }
     .bwc-marker { opacity: 1 !important; }
-    .bwc-marker-inner { transform: scale(1) !important; }
+    .bwc-marker-inner { opacity: 1 !important; transform: none !important; }
   }
 
   /* -------- responsive -------- */
