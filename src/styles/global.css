@@ -98,3 +98,26 @@ a:hover { color: var(--bwl-secondary); }
   border: 1px solid var(--line);
   color: var(--mist);
 }
+
+/* -------- mobile fixes for the fixed chrome (back-link, view switch, nav) --------
+   The page-level styles are Astro-scoped (higher specificity than plain
+   classes), so these overrides are scoped to small screens and use
+   !important deliberately: they only move/spill the fixed pills so they
+   never overlap or leave dead space on phones. */
+@media (max-width: 700px) {
+  .site-nav { top: 8px !important; }
+  .site-nav a { padding: 6px 12px !important; font-size: 11px !important; }
+  .back-link {
+    top: 62px !important;
+    left: 12px !important;
+    padding: 8px 14px !important;
+    justify-content: center !important;
+    text-align: center !important;
+  }
+  .view-switch {
+    top: 62px !important;
+    right: 12px !important;
+    justify-content: center !important;
+  }
+  .view-switch a { padding: 6px 12px !important; font-size: 11px !important; }
+}

@@ -11,9 +11,9 @@
       "slug": "education-knowledge",
       "name": "Education & Knowledge",
       "emoji": "📚",
-      "x": 24,
-      "y": 18,
-      "rationale": "Placed on the 'BioRegional Weaving Labs' billboard on the mountain peak — a knowledge/learning anchor."
+      "x": 20,
+      "y": 8,
+      "rationale": "Open sky over the mountain's west shoulder — clear of the BWL billboard."
     },
     {
       "slug": "ecosystems-biodiversity",
@@ -27,9 +27,9 @@
       "slug": "policy-advocacy",
       "name": "Policy & Advocacy",
       "emoji": "⚖️",
-      "x": 86,
-      "y": 24,
-      "rationale": "Over the tall city / institutional buildings on the right, read as governance."
+      "x": 74,
+      "y": 9,
+      "rationale": "Open sky right of the kite and left of the forest ridge — away from the city cluster."
     },
     {
       "slug": "energy-carbon",
@@ -43,9 +43,9 @@
       "slug": "finance-ownership",
       "name": "Finance & Ownership",
       "emoji": "👛",
-      "x": 84,
-      "y": 30,
-      "rationale": "Near the dense commercial/urban cluster where capital and ownership concentrate."
+      "x": 88,
+      "y": 58,
+      "rationale": "Calm coastal/field terrace south-east of the city — flat open area."
     },
     {
       "slug": "housing-infrastructure",
@@ -67,9 +67,9 @@
       "slug": "community-self-governance",
       "name": "Community & Self-Governance",
       "emoji": "🪢",
-      "x": 38,
-      "y": 44,
-      "rationale": "Central town square / gathering area — the social heart of the settlement."
+      "x": 78,
+      "y": 48,
+      "rationale": "Flat olive band east of the town, below the city — open ground."
     },
     {
       "slug": "health-social-services",

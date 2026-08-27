@@ -19,6 +19,7 @@ interface Innovation {
   tags: string[];
   depth: string;
   notionUrl: string | null;
+  externalUrl: string | null;
   imageUrl: string | null;
   imageFile: string | null;
 }
@@ -250,6 +251,15 @@ function curve(x1: number, y1: number, x2: number, y2: number, strength = 0.5) {
       <filter id="softShadow" x="-20%" y="-20%" width="140%" height="140%">
         <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#20404f" flood-opacity="0.08" />
       </filter>
+      {/* explicit clip rects keep every card image inside its own card */}
+      <clipPath id="clip-bio">
+        <rect x={bioX - bioW / 2} y={bioTop} width={bioW} height={bioImageH} rx="18" />
+      </clipPath>
+      {innovPositions.map((inv) => (
+        <clipPath id={`clip-${inv.slug}`}>
+          <rect x={sisX} y={inv.y - inv.cardHeight / 2} width={SIS_IMG} height={SIS_IMG} rx="10" />
+        </clipPath>
+      ))}
     </defs>
 
     {/* SIS → CS lines */}
@@ -310,7 +320,7 @@ function curve(x1: number, y1: number, x2: number, y2: number, strength = 0.5) {
           width={bioW}
           height={bioImageH}
           href={bioImageSrc}
-          clip-path="inset(0px round 18px 18px 0 0)"
+          clip-path="url(#clip-bio)"
           preserveAspectRatio="xMidYMid slice"
         />
       )}
@@ -361,33 +371,35 @@ function curve(x1: number, y1: number, x2: number, y2: number, strength = 0.5) {
       const nameY = cardTop + CS_TEXT_TOP + csNameLineHeight * 0.8;
       const leverageY = nameY + s.nameLines.length * csNameLineHeight + 4;
       return (
-        <g class={`card cs-card cs-${s.slug}`} data-el={`cs:${s.slug}`} tabindex="0">
-          <rect
-            x={csX}
-            y={s.y - s.cardHeight / 2}
-            width={csW}
-            height={s.cardHeight}
-            rx="12"
-            fill="var(--paper-raised)"
-            stroke={s.color}
-            stroke-width="2"
-            filter="url(#softShadow)"
-          />
-          <SVGTextBlock
-            lines={s.nameLines}
-            x={csX + 24}
-            y={nameY}
-            lineHeight="1.2em"
-            style="font-family:var(--font-display);font-size:12px;font-weight:bold;fill:var(--bwl-primary);"
-          />
-          <SVGTextBlock
-            lines={s.leverageLines}
-            x={csX + 24}
-            y={leverageY}
-            lineHeight="1.3em"
-            style="font-family:var(--font-body);font-size:9.5px;fill:var(--bwl-text);opacity:0.85;"
-          />
-        </g>
+        <a class="card-link" href={`${base}critical-shifts/${s.slug}/`}>
+          <g class={`card cs-card cs-${s.slug}`} data-el={`cs:${s.slug}`} tabindex="0">
+            <rect
+              x={csX}
+              y={s.y - s.cardHeight / 2}
+              width={csW}
+              height={s.cardHeight}
+              rx="12"
+              fill="var(--paper-raised)"
+              stroke={s.color}
+              stroke-width="2"
+              filter="url(#softShadow)"
+            />
+            <SVGTextBlock
+              lines={s.nameLines}
+              x={csX + 24}
+              y={nameY}
+              lineHeight="1.2em"
+              style="font-family:var(--font-display);font-size:12px;font-weight:bold;fill:var(--bwl-primary);"
+            />
+            <SVGTextBlock
+              lines={s.leverageLines}
+              x={csX + 24}
+              y={leverageY}
+              lineHeight="1.3em"
+              style="font-family:var(--font-body);font-size:9.5px;fill:var(--bwl-text);opacity:0.85;"
+            />
+          </g>
+        </a>
       );
     })}
 
@@ -422,7 +434,7 @@ function curve(x1: number, y1: number, x2: number, y2: number, strength = 0.5) {
               width={SIS_IMG}
               height={SIS_IMG}
               href={sisImageSrc}
-              clip-path="inset(0px round 10px 0 0 10px)"
+              clip-path={`url(#clip-${inv.slug})`}
               preserveAspectRatio="xMidYMid slice"
             />
           )}
@@ -452,8 +464,8 @@ function curve(x1: number, y1: number, x2: number, y2: number, strength = 0.5) {
             lineHeight="1.3em"
             style="font-family:var(--font-body);font-size:9.5px;fill:var(--bwl-text);opacity:0.85;"
           />
-          {inv.notionUrl && (
-            <a href={inv.notionUrl} target="_blank" rel="noopener">
+          {inv.externalUrl && (
+            <a href={inv.externalUrl} target="_blank" rel="noopener">
               <g>
                 <circle cx={sisX + sisW - 15} cy={inv.y + 22} r="8" fill="var(--bwl-secondary)" opacity="0.15" />
                 <text
@@ -551,6 +563,12 @@ function curve(x1: number, y1: number, x2: number, y2: number, strength = 0.5) {
     width: 100%;
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
+    /* short diagrams (few cards) are centred vertically on the page */
+    min-height: 100vh;
+    min-height: 100dvh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
   .flow-wrap svg {
     display: block;

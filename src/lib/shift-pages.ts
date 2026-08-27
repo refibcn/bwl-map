@@ -27,6 +27,7 @@ export interface ShiftInnovationRef {
   description: string;
   depth: string;
   notionUrl: string | null;
+  externalUrl: string | null;
   imageFile: string | null;
   imageUrl: string | null;
   bioregionSlug: string;
@@ -87,6 +88,7 @@ export function buildShiftPages(entries: BioregionEntry[], shifts: ShiftRecord[]
             description: inv.description,
             depth: inv.depth,
             notionUrl: inv.notionUrl,
+            externalUrl: inv.externalUrl,
             imageFile: inv.imageFile,
             imageUrl: inv.imageUrl,
             bioregionSlug: b.slug,

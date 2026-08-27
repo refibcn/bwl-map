@@ -28,6 +28,10 @@ export interface SystemicInnovation {
   tags: string[];
   depth: "core" | "story";
   notionUrl: string | null;
+  /** Full external URL for the "open on the BWL site" link: a curated
+   *  Website/Learn More URL when present, else composed from the URL slug
+   *  (https://bioregionalweavinglabs.org/systemic-innovations/<slug>). */
+  externalUrl: string | null;
   /** Original remote URL (fallback; Notion signed URLs expire). */
   imageUrl: string | null;
   /** Local filename in src/assets/notion-images/ (downloaded at build time). */
@@ -346,13 +350,15 @@ export function notionBioregionLoader(): Loader {
               .filter(Boolean) as string[];
             const slug = getRichText(i.properties, "URL slug") || slugify(getTitle(i.properties));
             const image = await resolveImage(i.properties, "Files & Media", slug, imagesDir, logger);
+            const notionUrl = getUrl(i.properties, "Website") || getUrl(i.properties, "Learn More") || null;
             return {
               slug,
               name: getTitle(i.properties),
               description: getRichText(i.properties, "short description") || getRichText(i.properties, "Description"),
               tags,
               depth: getCheckbox(i.properties, "Case Study") ? "story" : "core",
-              notionUrl: getUrl(i.properties, "Website") || getUrl(i.properties, "Learn More") || null,
+              notionUrl,
+              externalUrl: notionUrl || `https://bioregionalweavinglabs.org/systemic-innovations/${slug}`,
               imageUrl: image.url,
               imageFile: image.file,
             };

@@ -62,11 +62,12 @@ const shiftLeverageLines = capLines(wrapToWidth(shift.leveragePoint || "", shift
 const shiftDescLines = capLines(wrapToWidth(shift.shift || "", shiftW - 48, 10, "body"), 4);
 const shiftNameLineHeight = 20;
 const shiftBodyLineHeight = 13.5;
+// generous breathing room between title, leverage point and description
 const shiftTextHeight =
   shiftNameLines.length * shiftNameLineHeight +
-  6 +
+  14 +
   shiftLeverageLines.length * shiftBodyLineHeight +
-  6 +
+  12 +
   shiftDescLines.length * shiftBodyLineHeight;
 const shiftCardHeight = Math.max(140, shiftTextHeight + 36);
 
@@ -101,10 +102,11 @@ for (let i = 0; i < 5; i++) {
     const textX = sisX + leftInset;
     const textWidth = sisW - leftInset - SIS_TEXT_RIGHT;
     const nameLines = capLines(wrapToWidth(inv.name || "", textWidth, 12, "display"), 3);
-    const descLines = capLines(wrapToWidth(inv.description || "", textWidth, 9.5, "body"), 5);
     const bioLines = capLines(wrapToWidth(inv.bioregionName || "", textWidth, 8.5, "body"), 1);
+    const descLines = capLines(wrapToWidth(inv.description || "", textWidth, 9.5, "body"), 5);
+    // bioregion sits right under the title, description below it
     const textHeight =
-      nameLines.length * 14 + 4 + descLines.length * 12 + (bioLines.length ? 2 + bioLines.length * 11 : 0);
+      nameLines.length * 14 + 4 + bioLines.length * 11 + 4 + descLines.length * 12 + 6;
     return { ...inv, hasImage, nameLines, descLines, bioLines, textHeight, textX };
   });
   const next = Math.max(SIS_MIN_IMG, ...sisCards.map((c) => c.textHeight + 36));
@@ -157,6 +159,22 @@ function curve(x1: number, y1: number, x2: number, y2: number, strength = 0.5) {
       <filter id="softShadow" x="-20%" y="-20%" width="140%" height="140%">
         <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#20404f" flood-opacity="0.08" />
       </filter>
+      {/* explicit clip rects keep every card image inside its own card */}
+      {bioCards.map((b, i) => (
+        <clipPath id={`clip-bio-${b.slug}`}>
+          <rect x={bioColLeft} y={bioPositions[i] - b.cardHeight / 2} width={bioW} height={BIO_IMAGE_H} rx="14" />
+        </clipPath>
+      ))}
+      {sisCards.map((inv, j) => {
+        const imgY = sisPositions[j] - inv.cardHeight / 2;
+        // the square image strip never exceeds the card's own width
+        const imgW = Math.min(inv.cardHeight, sisW);
+        return (
+          <clipPath id={`clip-sis-${inv.slug}`}>
+            <rect x={sisX} y={imgY} width={imgW} height={inv.cardHeight} rx="10" />
+          </clipPath>
+        );
+      })}
     </defs>
 
     {/* Shift → bioregion lines */}
@@ -216,7 +234,7 @@ function curve(x1: number, y1: number, x2: number, y2: number, strength = 0.5) {
       <SVGTextBlock
         lines={shiftLeverageLines}
         x={shiftX - shiftW / 2 + 24}
-        y={shiftY - shiftCardHeight / 2 + 24 + shiftNameLines.length * shiftNameLineHeight + 8}
+        y={shiftY - shiftCardHeight / 2 + 24 + shiftNameLines.length * shiftNameLineHeight + 14}
         lineHeight="1.3em"
         anchor="start"
         style="font-family:var(--font-body);font-size:10px;fill:var(--bwl-secondary);font-weight:bold;letter-spacing:0.02em;"
@@ -229,9 +247,9 @@ function curve(x1: number, y1: number, x2: number, y2: number, strength = 0.5) {
           shiftCardHeight / 2 +
           24 +
           shiftNameLines.length * shiftNameLineHeight +
-          8 +
+          14 +
           shiftLeverageLines.length * shiftBodyLineHeight +
-          8
+          12
         }
         lineHeight="1.3em"
         anchor="start"
@@ -246,7 +264,8 @@ function curve(x1: number, y1: number, x2: number, y2: number, strength = 0.5) {
       const countryY = nameY + b.nameLines.length * 16.5 + 4;
       const descY = countryY + b.countryLines.length * 11 + 6;
       return (
-        <g class="card bio-card" data-el={`bio:${b.slug}`} tabindex="0">
+        <a class="card-link" href={`${base}bioregions/${b.slug}/`}>
+          <g class="card bio-card" data-el={`bio:${b.slug}`} tabindex="0">
           <rect
             x={bioColLeft}
             y={cardTop}
@@ -265,7 +284,7 @@ function curve(x1: number, y1: number, x2: number, y2: number, strength = 0.5) {
               width={bioW}
               height={BIO_IMAGE_H}
               href={resolveImageSource(b.imageFile, b.imageUrl)!}
-              clip-path="inset(0px round 14px 14px 0 0)"
+              clip-path={`url(#clip-bio-${b.slug})`}
               preserveAspectRatio="xMidYMid slice"
             />
           )}
@@ -306,6 +325,7 @@ function curve(x1: number, y1: number, x2: number, y2: number, strength = 0.5) {
             style="font-family:var(--font-body);font-size:9px;fill:var(--bwl-text);opacity:0.85;"
           />
         </g>
+        </a>
       );
     })}
 
@@ -316,8 +336,8 @@ function curve(x1: number, y1: number, x2: number, y2: number, strength = 0.5) {
       const sisImageSrc = resolveImageSource(inv.imageFile, inv.imageUrl);
       const imgY = y - inv.cardHeight / 2;
       const nameY = imgY + 12 + 14 * 0.8;
-      const descY = nameY + inv.nameLines.length * 14 + 4;
-      const bioY = descY + inv.descLines.length * 12 + 2;
+      const bioY = nameY + inv.nameLines.length * 14 + 4;
+      const descY = bioY + inv.bioLines.length * 11 + 4;
       return (
         <g class="card sis-card" data-el={`sis:${inv.slug}`} tabindex="0">
           <rect
@@ -336,10 +356,10 @@ function curve(x1: number, y1: number, x2: number, y2: number, strength = 0.5) {
             <image
               x={sisX}
               y={imgY}
-              width={inv.cardHeight}
+              width={Math.min(inv.cardHeight, sisW)}
               height={inv.cardHeight}
               href={sisImageSrc}
-              clip-path="inset(0px round 10px 0 0 10px)"
+              clip-path={`url(#clip-sis-${inv.slug})`}
               preserveAspectRatio="xMidYMid slice"
             />
           )}
@@ -364,14 +384,6 @@ function curve(x1: number, y1: number, x2: number, y2: number, strength = 0.5) {
             anchor="start"
             style="font-family:var(--font-display);font-size:12px;font-weight:bold;fill:var(--bwl-primary);"
           />
-          <SVGTextBlock
-            lines={inv.descLines}
-            x={inv.textX}
-            y={descY}
-            lineHeight="1.3em"
-            anchor="start"
-            style="font-family:var(--font-body);font-size:9.5px;fill:var(--bwl-text);opacity:0.85;"
-          />
           {inv.bioLines.length > 0 && (
             <SVGTextBlock
               lines={inv.bioLines}
@@ -382,8 +394,16 @@ function curve(x1: number, y1: number, x2: number, y2: number, strength = 0.5) {
               style="font-family:var(--font-body);font-size:8.5px;font-weight:bold;fill:var(--bwl-secondary);letter-spacing:0.05em;text-transform:uppercase;"
             />
           )}
-          {inv.notionUrl && (
-            <a href={inv.notionUrl} target="_blank" rel="noopener">
+          <SVGTextBlock
+            lines={inv.descLines}
+            x={inv.textX}
+            y={descY}
+            lineHeight="1.3em"
+            anchor="start"
+            style="font-family:var(--font-body);font-size:9.5px;fill:var(--bwl-text);opacity:0.85;"
+          />
+          {inv.externalUrl && (
+            <a href={inv.externalUrl} target="_blank" rel="noopener">
               <g>
                 <circle cx={sisX + sisW - 15} cy={y + 22} r="8" fill="var(--bwl-secondary)" opacity="0.15" />
                 <text
@@ -473,6 +493,12 @@ function curve(x1: number, y1: number, x2: number, y2: number, strength = 0.5) {
     width: 100%;
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
+    /* short diagrams (few cards) are centred vertically on the page */
+    min-height: 100vh;
+    min-height: 100dvh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
   .flow-wrap svg {
     display: block;
