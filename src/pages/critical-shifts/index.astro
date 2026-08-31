@@ -1,7 +1,6 @@
 ---
 import { getCollection } from "astro:content";
 import BaseLayout from "../../layouts/BaseLayout.astro";
-import SiteNav from "../../components/SiteNav.astro";
 import CriticalShiftsMap from "../../components/CriticalShiftsMap.astro";
 import { buildShiftPages } from "../../lib/shift-pages";
 
@@ -16,7 +15,6 @@ const shifts = buildShiftPages(
 ---
 
 <BaseLayout title="Critical shifts — BWL Map">
-  <SiteNav current="shifts" />
   <main>
     <CriticalShiftsMap shifts={shifts} />
   </main>

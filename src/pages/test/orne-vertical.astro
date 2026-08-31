@@ -1,7 +1,6 @@
 ---
 import { getCollection } from "astro:content";
 import BaseLayout from "../../layouts/BaseLayout.astro";
-import SiteNav from "../../components/SiteNav.astro";
 import VerticalFlow from "../../components/VerticalFlow.astro";
 
 const all = await getCollection("bioregions");
@@ -14,11 +13,11 @@ const data = orne?.data;
 ---
 
 <BaseLayout title="Orne Watershed — vertical layout test">
-  <SiteNav current="map" />
   <a class="back-link" href={base} aria-label="Back to the map">← Map</a>
   {data ? (
     <VerticalFlow
       bioregionName={data.name}
+      bioregionSlug={data.slug}
       bioregionDescription={data.shortNarrative || data.intro}
       bioregionCountry={data.country}
       bioregionImageUrl={data.imageUrl}
@@ -49,8 +48,10 @@ const data = orne?.data;
     background: var(--paper-raised);
     color: var(--bwl-primary);
     font-family: var(--font-body);
-    font-size: 13px;
+    font-size: 12px;
     font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
     text-decoration: none;
     box-shadow: 0 1px 4px rgba(32, 64, 79, 0.12);
     transition: background 0.15s ease, border-color 0.15s ease;

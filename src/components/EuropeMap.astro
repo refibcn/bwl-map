@@ -1,29 +1,22 @@
 ---
 /**
- * BWL map landing — w1-style Europe map with clickable region markers and a
- * permanent left side panel holding the brand block (eyebrow + title) and
- * the bioregion list.
+ * BWL map landing — an interactive MapLibre map of Europe with clickable
+ * bioregion markers and a permanent left side panel holding the brand block
+ * (eyebrow + title) and the bioregion list.
  *
- * Map framing: the projection canvas (europe-map.json) covers all of Europe;
- * we show a WINDOW of it (viewBox "110 180 620 470") that frames the six
- * bioregion markers with sea/padding and an aspect ratio (~1.32) close to
- * the typical stage column. The stage fills its column completely and the
- * SVG uses "slice" — so any cropping happens at the page borders, like a
- * normal map.
+ * Map: MapLibre GL JS + a free, keyless vector basemap (CARTO Positron —
+ * no account/token needed), pulled toward this page's own sea/land palette.
+ * `fitBounds()` frames all 6 bioregions with a capped max zoom, so the map
+ * always shows Europe-wide context instead of a tight crop.
  *
- * Markers are the ORIGINAL HTML overlay version (photo in a ringed circle,
- * region-coloured rings, name pill, pop-in entrance). Because the slice
- * crop shifts the visible part of the map, a small script converts each
- * marker's map-window coordinates (data-wx/data-wy) into stage percentages
- * on load and resize — they stay glued to the land at every screen size.
- * The base style is "visible": the entrance animation lives in keyframes
- * only (fill-mode both), so markers can never disappear.
+ * Markers are plain HTML (photo in a ringed circle, region-coloured ring,
+ * name pill) handed to MapLibre as custom marker elements — MapLibre owns
+ * their on-map position (via lat/lng), our CSS only styles their contents
+ * and hover/entrance states.
  *
- * On narrow screens (<1480px) the layout stacks (map first, panel below):
- * the stage switches to the window's own aspect ratio — no crop, and the
- * positioning script degrades to the plain percentages.
+ * Sidebar rows and map markers share `data-slug`; a small script wires
+ * bidirectional hover highlighting between them (see the script below).
  */
-import europeMap from "../data/europe-map.json";
 import { notionImageUrl } from "../lib/images";
 import type { MapRegion } from "../lib/map-regions";
 
@@ -33,103 +26,71 @@ interface Props {
 
 const { regions } = Astro.props;
 const base = import.meta.env.BASE_URL.endsWith("/") ? import.meta.env.BASE_URL : import.meta.env.BASE_URL + "/";
-const W = europeMap.width; // 1000 — projection canvas width
-const H = europeMap.height; // 691.4 — projection canvas height
-// Deduplicate path strings: several countries share land paths in the 50m
-// set (e.g. San Marino is a hole in Italy) — a Set shrinks the SVG.
-const paths = [...new Set(europeMap.countries.flatMap((c) => c.d))];
 
-/** The visible map window inside the projection canvas (viewBox). Chosen so
- *  the six markers sit mid-frame with generous sea margins: at any desktop
- *  aspect wider than ~1.05 the slice-crop stays outside the marker band
- *  (Orne 16%..Oltenia 88%), and screens below 1480px stack (no crop at all). */
-const VIEW = { x: 110, y: 180, w: 620, h: 470 };
-
-// Markers: window-relative coordinates (0..VIEW.w / 0..VIEW.h), used by the
-// positioning script to place them on top of the slice-fitted map.
-const markers = regions.map((r) => ({
-  ...r,
-  wx: (r.x / 100) * W - VIEW.x,
-  wy: (r.y / 100) * H - VIEW.y,
+// Payload handed to the client script via a data-* attribute (same
+// props-to-DOM-to-script bridge the old crop-glue script used).
+const mapRegions = regions.map((r) => ({
+  slug: r.slug,
+  name: r.name,
+  lat: r.lat,
+  lng: r.lng,
+  ring: r.ring,
+  img: notionImageUrl(r.imageFile) ?? r.imageUrl ?? null,
 }));
 ---
 
 <div class="bwc-hero" id="bwcHero">
   <div class="bwc-layout">
-    <aside class="bio-panel">
+    <div class="bio-hero-block">
       <p class="bio-eyebrow">Bioregional Weaving Labs</p>
-      <h1 class="bio-hero-title">
+      <h1 class="bio-hero-title hero-title">
         Weaving Communities of Action,<br />
         Rooted in Place
       </h1>
-      <p class="bio-hero-subtitle">Explore a bioregion by clicking on the map</p>
+      <p class="hero-intro">
+        We weave resilient Communities of Action rooted in their <strong>bioregions</strong>, helping them drive
+        <strong>Critical Shifts</strong> — the systemic changes that strengthen the ecological, social, cultural,
+        and economic fabric of a place.
+      </p>
+    </div>
+
+    <div class="bio-toggle-block">
       <div class="bio-divider"></div>
-      <h2 class="bio-title">Bioregions</h2>
-      <div class="bio-list-wrap">
-        <div class="bio-list">
-          {regions.map((r) => (
-            <a class="bio-row" href={`${base}bioregions/${r.slug}/`}>
-              <span class="bio-name">{r.name}</span>
-              <span class="bio-country">{r.country}</span>
-            </a>
-          ))}
-        </div>
-      </div>
-    </aside>
+      <nav class="view-toggle-big" aria-label="Views">
+        <a class="active" href={base}>Bioregions</a>
+        <a href={`${base}critical-shifts/`}>Critical shifts</a>
+      </nav>
+    </div>
 
     <div class="bwc-stage-col">
-      <div class="bwc-stage" data-view-w={VIEW.w} data-view-h={VIEW.h}>
-        <svg
-          class="bwc-map"
-          viewBox={`${VIEW.x} ${VIEW.y} ${VIEW.w} ${VIEW.h}`}
+      <div class="bwc-stage">
+        <div
+          id="bwcMapCanvas"
+          class="bwc-canvas"
+          data-regions={JSON.stringify(mapRegions)}
+          data-base={base}
           role="img"
           aria-label="Map of Europe with bioregion markers"
-          preserveAspectRatio="xMidYMid slice"
-        >
-          <defs>
-            {/* Land-edge fade: the map window cuts through land at its top
-                (northern England/Germany) and right (Ukraine) edges, which
-                renders as a straight 'line border'. Instead of masking the
-                land (mask-on-group rendering is unreliable across browsers),
-                we PAINT sea-coloured gradient rects over the land right at
-                the edges — the land visually dissolves into the ocean.
-                Top: 5.5% of the window height; right: 4.5% of its width. */}
-            <linearGradient id="bwc-top-sea" gradientUnits="userSpaceOnUse" x1="0" y1={VIEW.y} x2="0" y2={VIEW.y + VIEW.h * 0.055}>
-              {/* NOTE: stop attributes MUST be hyphenated (stop-color/stop-opacity);
-                  the camelCase stopColor/stopOpacity is not adjusted and renders black */}
-              <stop offset="0" stop-color="#8da5af" stop-opacity="1" />
-              <stop offset="1" stop-color="#8da5af" stop-opacity="0" />
-            </linearGradient>
-            <linearGradient id="bwc-right-sea" gradientUnits="userSpaceOnUse" x1={VIEW.x + VIEW.w} y1="0" x2={VIEW.x + VIEW.w - VIEW.w * 0.045} y2="0">
-              <stop offset="0" stop-color="#8da5af" stop-opacity="1" />
-              <stop offset="1" stop-color="#8da5af" stop-opacity="0" />
-            </linearGradient>
-          </defs>
-          <g class="land">
-            {paths.map((d) => <path d={d} />)}
-          </g>
-          <rect x={VIEW.x} y={VIEW.y} width={VIEW.w} height={VIEW.h * 0.055} fill="url(#bwc-top-sea)" />
-          <rect x={VIEW.x + VIEW.w - VIEW.w * 0.045} y={VIEW.y} width={VIEW.w * 0.045} height={VIEW.h} fill="url(#bwc-right-sea)" />
-        </svg>
+        ></div>
+      </div>
+    </div>
 
-        <div class="bwc-markers">
-          {markers.map((r, i) => {
-            const img = notionImageUrl(r.imageFile) ?? r.imageUrl ?? undefined;
+    <div class="bio-list-block">
+      <div class="bio-list-wrap">
+        <div class="bio-list">
+          {regions.map((r) => {
+            const img = notionImageUrl(r.imageFile) ?? r.imageUrl ?? null;
             return (
-              <a
-                class="bwc-marker"
-                href={`${base}bioregions/${r.slug}/`}
-                style={`--ring:${r.ring};--i:${i}`}
-                data-wx={r.wx.toFixed(1)}
-                data-wy={r.wy.toFixed(1)}
-                aria-label={r.name}
-              >
+              <a class="bio-row" href={`${base}bioregions/${r.slug}/`} data-slug={r.slug}>
                 {img ? (
-                  <span class="bwc-ring-img"><img src={img} alt="" loading="lazy" /></span>
+                  <img class="bio-row-thumb" src={img} alt="" loading="lazy" />
                 ) : (
-                  <span class="bwc-dot"></span>
+                  <span class="bio-row-thumb bio-row-thumb-empty" aria-hidden="true"></span>
                 )}
-                <span class="bwc-label">{r.name}</span>
+                <span class="bio-row-body">
+                  <span class="bio-name">{r.name}</span>
+                  <span class="bio-country">{r.country}</span>
+                </span>
               </a>
             );
           })}
@@ -140,6 +101,12 @@ const markers = regions.map((r) => ({
 </div>
 
 <script>
+  // maplibre-gl v6 ships only named exports (no default export) — MapLibreMap
+  // is their own alias for Map, avoiding a collision with the built-in JS Map
+  // we use below for the slug lookups.
+  import { MapLibreMap, Marker, LngLatBounds } from "maplibre-gl";
+  import "maplibre-gl/dist/maplibre-gl.css";
+
   const hero = document.getElementById("bwcHero");
 
   function play() {
@@ -148,45 +115,134 @@ const markers = regions.map((r) => ({
   if (document.readyState === "complete") requestAnimationFrame(play);
   else window.addEventListener("load", () => requestAnimationFrame(play));
 
-  // ---- marker glue: place the HTML markers on the slice-fitted map ----
-  // The SVG viewBox is the map window (VIEW); the stage fills its column and
-  // the SVG slice-crops to cover it. The visible portion of the window is a
-  // centred sub-rectangle whose size depends on the stage's live aspect:
-  //   stage aspect >= window aspect -> full width, vertical crop
-  //   stage aspect <  window aspect -> full height, horizontal crop
-  // We convert each marker's window coordinates into stage percentages.
-  const stage = hero?.querySelector<HTMLElement>(".bwc-stage");
-  const markers = hero?.querySelectorAll<HTMLElement>(".bwc-marker");
-  const viewW = Number(stage?.dataset.viewW ?? 620);
-  const viewH = Number(stage?.dataset.viewH ?? 470);
-  const viewAspect = viewW / viewH;
+  interface RegionData {
+    slug: string;
+    name: string;
+    lat: number;
+    lng: number;
+    ring: string;
+    img: string | null;
+  }
 
-  function placeMarkers() {
-    if (!stage || !markers || !markers.length) return;
-    const rect = stage.getBoundingClientRect();
-    if (!rect.width || !rect.height) return;
-    const sAspect = rect.width / rect.height;
-    let cropL = 0;
-    let cropT = 0;
-    let visW = viewW;
-    let visH = viewH;
-    if (sAspect >= viewAspect) {
-      visH = viewW / sAspect; // vertical crop
-      cropT = (viewH - visH) / 2;
-    } else {
-      visW = viewH * sAspect; // horizontal crop
-      cropL = (viewW - visW) / 2;
-    }
-    markers.forEach((m) => {
-      const wx = parseFloat(m.dataset.wx || "0");
-      const wy = parseFloat(m.dataset.wy || "0");
-      m.style.setProperty("--x", (((wx - cropL) / visW) * 100).toFixed(3) + "%");
-      m.style.setProperty("--y", (((wy - cropT) / visH) * 100).toFixed(3) + "%");
+  const canvas = document.getElementById("bwcMapCanvas");
+  if (canvas) {
+    const regions: RegionData[] = JSON.parse(canvas.dataset.regions || "[]");
+    const base = canvas.dataset.base || "/";
+
+    // Default framing — hand-picked (not auto-fitBounds) so the map always
+    // opens on this exact view regardless of how the region list changes.
+    // On mobile the stage is much shorter (see the 1480px breakpoint below),
+    // so the hand-picked view would crop several bioregions out of frame —
+    // there we fit the actual bounds of every region instead, zoomed out
+    // enough that all of them stay visible.
+    const DEFAULT_CENTER: [number, number] = [13.6633, 47.4381];
+    const DEFAULT_ZOOM = 4.15;
+    const isMobile = window.matchMedia("(max-width: 1480px)").matches;
+    const bounds = regions.reduce((b, r) => b.extend([r.lng, r.lat]), new LngLatBounds());
+
+    const map = new MapLibreMap({
+      container: canvas,
+      style: "https://basemaps.cartocdn.com/gl/positron-gl-style/style.json",
+      attributionControl: { compact: true },
+      ...(isMobile
+        ? { bounds, fitBoundsOptions: { padding: 36, maxZoom: 5 } }
+        : { center: DEFAULT_CENTER, zoom: DEFAULT_ZOOM }),
+    });
+
+    // MapLibre sizes its internal WebGL canvas from the container's measured
+    // size at construction time; if that measurement happens before the
+    // flex layout / entrance animation has settled, the canvas locks to a
+    // too-small size and never grows to match its CSS box. Force a resize
+    // once things settle, and keep it correct across layout changes
+    // (breakpoint switches, font-load reflow) via ResizeObserver.
+    requestAnimationFrame(() => map.resize());
+    window.addEventListener("load", () => map.resize());
+    new ResizeObserver(() => map.resize()).observe(canvas);
+
+    // CARTO Positron's own layer ids (checked against its published style.json).
+    const RECOLOR_LAND = ["landcover", "landuse", "landuse_residential", "park_national_park", "park_nature_reserve"];
+    const RECOLOR_WATER = ["water", "water_shadow"];
+    const HIDE_LAYERS = [
+      "building", "building-top",
+      "aeroway-runway", "aeroway-taxiway",
+      "poi_stadium", "poi_park",
+      "roadname_minor", "roadname_sec",
+      "housenumber",
+      "waterway_label", "watername_lake_line",
+      "rail", "rail_dash",
+    ];
+
+    map.on("load", () => {
+      // Pull the stock light basemap toward this page's own sea/land
+      // palette and quiet down layers that would clutter an editorial map
+      // (POIs, transit, road labels). "background" is the base fill for
+      // everywhere with no water polygon — i.e. dry land, not ocean. No
+      // country/city names either — this map speaks through the bioregion
+      // markers, not the basemap's own place labels, so hide every
+      // "place_*" layer (countries, states, cities, towns, villages...).
+      try { map.setPaintProperty("background", "background-color", "#e9e6d5"); } catch {}
+      RECOLOR_WATER.forEach((id) => {
+        try { map.setPaintProperty(id, "fill-color", "#8da5af"); } catch {}
+      });
+      RECOLOR_LAND.forEach((id) => {
+        try { map.setPaintProperty(id, "fill-color", "#e9e6d5"); } catch {}
+      });
+      HIDE_LAYERS.forEach((id) => {
+        try { map.setLayoutProperty(id, "visibility", "none"); } catch {}
+      });
+      map.getStyle()?.layers?.forEach((layer: any) => {
+        if (String(layer.id).startsWith("place_")) {
+          try { map.setLayoutProperty(layer.id, "visibility", "none"); } catch {}
+        }
+      });
+
+      map.resize();
+    });
+
+    const markersBySlug = new Map<string, InstanceType<typeof Marker>>();
+    regions.forEach((r, i) => {
+      const el = document.createElement("a");
+      el.className = "bwc-marker";
+      el.href = `${base}bioregions/${r.slug}/`;
+      el.style.setProperty("--ring", r.ring);
+      el.style.setProperty("--i", String(i));
+      el.dataset.slug = r.slug;
+      el.setAttribute("aria-label", r.name);
+
+      const visual = r.img
+        ? `<span class="bwc-ring-img"><img src="${r.img}" alt="" loading="lazy" /></span>`
+        : `<span class="bwc-dot"></span>`;
+      el.innerHTML = `<span class="bwc-marker-inner">${visual}<span class="bwc-label">${r.name}</span></span>`;
+
+      const marker = new Marker({ element: el, anchor: "center" }).setLngLat([r.lng, r.lat]).addTo(map);
+      markersBySlug.set(r.slug, marker);
+    });
+
+    // ---- sidebar <-> marker bidirectional hover sync ----
+    const rowsBySlug = new Map<string, HTMLElement>();
+    hero?.querySelectorAll<HTMLElement>(".bio-row").forEach((row) => {
+      const slug = row.dataset.slug;
+      if (slug) rowsBySlug.set(slug, row);
+    });
+
+    markersBySlug.forEach((marker, slug) => {
+      const markerEl = marker.getElement();
+      const row = rowsBySlug.get(slug);
+      if (!row) return;
+      const activate = () => {
+        markerEl.classList.add("is-active");
+        row.classList.add("is-active");
+      };
+      const deactivate = () => {
+        markerEl.classList.remove("is-active");
+        row.classList.remove("is-active");
+      };
+      markerEl.addEventListener("mouseenter", activate);
+      markerEl.addEventListener("mouseleave", deactivate);
+      row.addEventListener("mouseenter", activate);
+      row.addEventListener("mouseleave", deactivate);
     });
   }
-  placeMarkers();
-  window.addEventListener("resize", placeMarkers);
-  window.addEventListener("load", placeMarkers);
 </script>
 
 <style>
@@ -215,16 +271,29 @@ const markers = regions.map((r) => ({
     background: var(--bwc-ocean);
   }
 
-  /* side panel (left) + map (right): the map fills the whole column. */
+  /* side panel (left) + map (right): both flush to the viewport edges, the
+     map fills the whole remaining column. No explicit height here — .bwc-hero
+     only has a min-height (100dvh), not a definite height, so a child
+     `height:100%` would resolve to auto and collapse to content size; being
+     the sole child of .bwc-hero (a flex container), .bwc-layout gets a
+     definite height for free from flex's own default stretch, which its
+     own grid rows below can then distribute. Desktop: a 2-column grid — the
+     hero block, the view toggle and the bioregion list stack in the left
+     column (hero on top, list filling the rest and scrolling internally),
+     the map spans all three rows on the right. Using grid (not flex) here,
+     specifically so the hero, toggle and list can become independent grid
+     areas: on mobile the layout switches to a single flex column and
+     re-orders hero → toggle → map → list, which needs them to be
+     separable in the first place. */
   .bwc-layout {
-    display: flex;
-    align-items: stretch;
-    gap: 24px;
+    display: grid;
+    grid-template-columns: minmax(0, 1.4fr) minmax(0, 4fr);
+    grid-template-rows: auto auto 1fr;
+    grid-template-areas: "hero stage" "toggle stage" "list stage";
     width: 100%;
-    padding: 24px;
   }
   .bwc-stage-col {
-    flex: 1 1 0;
+    grid-area: stage;
     min-width: 0;
     display: flex;
   }
@@ -233,33 +302,41 @@ const markers = regions.map((r) => ({
     width: 100%;
     height: 100%;
   }
-  /* the ocean is the page background; the SVG sea is transparent, so any
-     slice-crop beyond the land reads as open sea right up to the border */
-  .bwc-map {
-    display: block;
+  .bwc-canvas {
     width: 100%;
     height: 100%;
     opacity: 0;
   }
 
-  .land path { fill: var(--bwc-land); }
-
-  /* -------- side panel (left): brand block + bioregion list -------- */
-  /* Mirrors the critical-shifts panel (CriticalShiftsMap.astro): same width
-     (max 520px), 32px panel sides, 14px list container, 8px row gap — the
-     cards sit close to the panel border, like the eyebrow's own inset. */
-  .bio-panel {
-    flex: 1.4 1 0;
+  /* -------- side panel (left): brand block, then the view toggle, then the
+     bioregion list — split into three grid areas (see .bwc-layout) so
+     mobile can put the map between them. Mirrors the critical-shifts panel
+     (CriticalShiftsMap.astro): same width (max 520px), 32px panel sides,
+     14px list container, 8px row gap — the cards sit close to the panel
+     border, like the eyebrow's own inset. */
+  .bio-hero-block {
+    grid-area: hero;
     max-width: 520px;
-    position: relative;
+    background: var(--bwc-card-bg);
+    border-right: 1px solid rgba(32, 64, 79, 0.18);
+    padding: 28px 32px 0;
+  }
+  .bio-toggle-block {
+    grid-area: toggle;
+    max-width: 520px;
+    background: var(--bwc-card-bg);
+    border-right: 1px solid rgba(32, 64, 79, 0.18);
+    padding: 0 32px;
+  }
+  .bio-list-block {
+    grid-area: list;
+    max-width: 520px;
+    min-height: 0;
     display: flex;
     flex-direction: column;
-    min-height: 0;
     background: var(--bwc-card-bg);
-    border: 1px solid rgba(32, 64, 79, 0.18);
-    border-radius: 18px;
-    padding: 28px 32px 32px;
-    box-shadow: 0 18px 40px var(--bwc-shadow);
+    border-right: 1px solid rgba(32, 64, 79, 0.18);
+    padding: 0 32px 32px;
   }
   .bio-eyebrow {
     font-family: var(--bwc-font-body);
@@ -270,39 +347,15 @@ const markers = regions.map((r) => ({
     color: #6d7a6b;
   }
   .bio-hero-title {
-    font-family: var(--bwc-font-head);
-    font-weight: 700;
-    font-size: 22px;
-    line-height: 1.18;
-    color: var(--bwc-title);
     margin-top: 6px;
   }
-  .bio-hero-subtitle {
-    margin-top: 10px;
-    font-family: var(--bwc-font-body);
-    font-size: 12px;
-    font-weight: 700;
-    line-height: 1.4;
-    color: #0a1419;
-    background: rgba(255, 255, 255, 0.55);
-    border: 1px solid rgba(255, 255, 255, 0.7);
-    border-radius: 6px;
-    /* left padding 0: the sentence starts exactly under the title */
-    padding: 8px 12px 8px 0;
-  }
+  /* left padding 0 (from the shared .hero-subtitle): the sentence starts
+     exactly under the title */
   .bio-divider {
     height: 1px;
     background: rgba(32, 64, 79, 0.14);
     margin: 18px 0 16px;
   }
-  .bio-title {
-    font-family: var(--bwc-font-head);
-    font-weight: 700;
-    font-size: 19px;
-    color: var(--bwc-title);
-    margin-bottom: 12px;
-  }
-
   /* the list sits in its own inset container; it scrolls internally so the
      panel always fits the screen height (and the map can fill the rest) */
   .bio-list-wrap {
@@ -321,22 +374,50 @@ const markers = regions.map((r) => ({
   }
   .bio-row {
     display: flex;
-    justify-content: space-between;
-    align-items: center;
+    align-items: stretch;
     gap: 12px;
     min-height: 52px;
-    padding: 10px 12px;
-    background: #fffff0;
+    /* no padding here — the thumb sits flush against the row's own edges;
+       .bio-row-body carries the text's own padding instead. overflow:hidden
+       + the row's own border-radius clips the flush thumb to match: its
+       outer (left) corners round with the row, its inner (right) edge —
+       well inside the row, nowhere near a rounded corner — stays sharp. */
+    padding: 0;
+    background: #fff;
     border: 1px solid rgba(32, 64, 79, 0.12);
     border-radius: 10px;
+    overflow: hidden;
     text-decoration: none;
     transition: border-color 0.15s ease, background 0.15s ease;
   }
-  .bio-row:hover {
-    border-color: var(--bwl-secondary);
-    background: #fff;
+  .bio-row:hover,
+  .bio-row.is-active {
+    border-color: var(--bwl-primary);
+    /* opaque, not translucent — a translucent fill here would let the
+       .bio-list-wrap background behind it bleed through instead of giving
+       a subtle wash on top of the row's own white */
+    background: #f5f6f7;
+  }
+  .bio-row-thumb {
+    flex-shrink: 0;
+    width: 52px;
+    object-fit: cover;
+    background: rgba(32, 64, 79, 0.08);
+  }
+  .bio-row-thumb-empty {
+    display: block;
+  }
+  .bio-row-body {
+    flex: 1 1 auto;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 8px 12px 8px 0;
   }
   .bio-name {
+    flex: 1 1 auto;
+    min-width: 0;
     font-family: var(--bwc-font-head);
     font-weight: 600;
     font-size: 15px;
@@ -356,27 +437,97 @@ const markers = regions.map((r) => ({
     padding: 5px 12px;
   }
 
-  /* -------- markers: the ORIGINAL overlay version (photo in a ringed
-     circle, region ring, name pill). The base style is VISIBLE — the
-     entrance animation only lives inside keyframes (fill both), so the
-     markers can never disappear even if the animation never runs. -------- */
-  .bwc-markers { position: absolute; inset: 0; }
+  /* -------- entrance animation (fade for the map). Marker entrance/hover
+     styles live in the GLOBAL style block below, since MapLibre markers are
+     created with document.createElement — they never receive Astro's
+     scoped-style attribute, so scoped selectors would silently never match
+     them. -------- */
+  .bwc-hero.is-loaded .bwc-canvas {
+    animation: bwc-map-in 1.2s ease forwards;
+  }
+  @keyframes bwc-map-in { to { opacity: 1; } }
 
+  @media (prefers-reduced-motion: reduce) {
+    .bwc-hero * { animation: none !important; }
+    .bwc-canvas { opacity: 1 !important; }
+  }
+
+  /* -------- responsive -------- */
+  /* below 1480px: stack — hero first, then the view toggle, then the map,
+     then the list — a single flex column with explicit order, so the map
+     can sit between the pieces of what's one continuous panel on desktop.
+     The divider is dropped entirely on mobile — the toggle sits close
+     enough under the paragraph that it doesn't need one. The map's
+     aspect-ratio matches the critical-shifts landscape image exactly, so
+     both maps render at the same height on mobile (this value must stay in
+     sync with CriticalShiftsMap.astro's own mobile .cs-stage aspect-ratio).
+     The map itself also switches to a fitBounds view at this width (see the
+     script above) so the tighter box still shows every bioregion. */
+  @media (max-width: 1480px) {
+    .bwc-hero { min-height: auto; display: block; }
+    .bwc-layout { display: flex; flex-direction: column; }
+    .bio-hero-block {
+      order: 1;
+      max-width: none;
+      width: 100%;
+      border-right: none;
+      padding: 20px 24px 0;
+    }
+    .bio-toggle-block {
+      order: 2;
+      max-width: none;
+      width: 100%;
+      border-right: none;
+      border-bottom: 1px solid rgba(32, 64, 79, 0.18);
+      padding: 12px 24px 4px;
+    }
+    .bio-divider { display: none; }
+    .bwc-stage-col { order: 3; flex: none; width: 100%; }
+    .bwc-stage { aspect-ratio: 956 / 572; height: auto; max-height: none; }
+    .bio-list-block {
+      order: 4;
+      flex: none;
+      max-width: none;
+      width: 100%;
+      border-right: none;
+      border-top: 1px solid rgba(32, 64, 79, 0.18);
+      padding: 16px 24px 24px;
+    }
+  }
+</style>
+
+<style is:global>
+  /* -------- markers: photo in a ringed circle, region ring, name pill.
+     GLOBAL (not scoped) — MapLibre markers are plain document.createElement
+     nodes handed to Marker({ element }), so they never get Astro's
+     data-astro-cid scoping attribute; scoped selectors here would never
+     match them. MapLibre owns each marker's on-map position (it sets its
+     own inline transform for that) — this CSS only sizes/styles the
+     element and its contents, and animates the INNER wrapper (never the
+     marker root's own transform, which would fight MapLibre's
+     positioning). Class names are bwc-* prefixed and specific enough not
+     to collide with anything else on the site. -------- */
   .bwc-marker {
-    position: absolute;
-    left: var(--x);
-    top: var(--y);
-    width: var(--hit, 4.6%);
-    aspect-ratio: 1/1;
-    transform: translate(-50%, -50%);
     display: block;
+    width: 44px;
+    height: 44px;
     text-decoration: none;
     cursor: pointer;
-    opacity: 1;
     z-index: 3;
   }
   .bwc-marker:hover,
-  .bwc-marker:focus-within { z-index: 60; }
+  .bwc-marker:focus-within,
+  .bwc-marker.is-active {
+    z-index: 60;
+  }
+
+  .bwc-marker-inner {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    display: block;
+    opacity: 1;
+  }
 
   .bwc-ring-img {
     position: absolute;
@@ -396,7 +547,8 @@ const markers = regions.map((r) => ({
     display: block;
   }
   .bwc-marker:hover .bwc-ring-img,
-  .bwc-marker:focus-visible .bwc-ring-img {
+  .bwc-marker:focus-visible .bwc-ring-img,
+  .bwc-marker.is-active .bwc-ring-img {
     transform: scale(1.15);
   }
 
@@ -411,7 +563,8 @@ const markers = regions.map((r) => ({
     transition: transform 0.25s ease;
   }
   .bwc-marker:hover .bwc-dot,
-  .bwc-marker:focus-visible .bwc-dot {
+  .bwc-marker:focus-visible .bwc-dot,
+  .bwc-marker.is-active .bwc-dot {
     transform: scale(1.18);
   }
 
@@ -421,60 +574,53 @@ const markers = regions.map((r) => ({
     top: calc(100% + 3px);
     left: 50%;
     transform: translateX(-50%);
-    font-family: var(--bwc-font-body);
-    font-size: clamp(8px, 0.62vw, 11px);
+    font-family: "Lato", Helvetica, Arial, sans-serif;
+    font-size: 11px;
     font-weight: 700;
     letter-spacing: 0.04em;
     line-height: 1.15;
     text-align: center;
     text-transform: uppercase;
     white-space: nowrap;
-    color: var(--bwc-label-text, #fffff0);
+    color: #fffff0;
     background: var(--ring, #c9762b);
     padding: 4px 7px;
     border-radius: 5px;
-    box-shadow: 0 3px 8px var(--bwc-shadow);
+    box-shadow: 0 3px 8px rgba(20, 40, 30, 0.28);
     pointer-events: none;
     transition: transform 0.3s ease, box-shadow 0.3s ease;
   }
   .bwc-marker:hover .bwc-label,
-  .bwc-marker:focus-visible .bwc-label {
-    box-shadow: 0 6px 14px var(--bwc-shadow);
+  .bwc-marker:focus-visible .bwc-label,
+  .bwc-marker.is-active .bwc-label {
+    box-shadow: 0 6px 14px rgba(20, 40, 30, 0.28);
     transform: translateX(-50%) translateY(1px);
   }
 
-  /* -------- entrance animations (fade for the map, pop for markers).
-     Base styles are visible; the is-loaded rules only ADD the animation,
-     and `both` holds the final keyframe — no disappearance possible. -------- */
-  .bwc-hero.is-loaded .bwc-map {
-    animation: bwc-map-in 1.2s ease forwards;
-  }
-  .bwc-hero.is-loaded .bwc-marker {
+  /* entrance pop, staggered by --i. Base style is visible; is-loaded only
+     ADDS the animation, and `both` holds the final keyframe — the marker
+     can never disappear even if the animation never runs. Animates the
+     INNER wrapper's transform only, never the marker root's (MapLibre owns
+     that one for on-map positioning). */
+  .bwc-hero.is-loaded .bwc-marker-inner {
     animation: bwc-pop 0.6s cubic-bezier(0.2, 0.9, 0.3, 1.4) both;
     animation-delay: calc(0.8s + var(--i) * 0.12s);
   }
-  @keyframes bwc-map-in { to { opacity: 1; } }
   @keyframes bwc-pop {
-    0% { opacity: 0; transform: translate(-50%, -50%) scale(0.4); }
-    70% { opacity: 1; transform: translate(-50%, -50%) scale(1.1); }
-    100% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+    0% { opacity: 0; transform: scale(0.4); }
+    70% { opacity: 1; transform: scale(1.1); }
+    100% { opacity: 1; transform: scale(1); }
   }
 
   @media (prefers-reduced-motion: reduce) {
-    .bwc-hero * { animation: none !important; }
-    .bwc-map, .bwc-marker { opacity: 1 !important; }
-    .bwc-marker { transform: translate(-50%, -50%) !important; }
+    .bwc-marker-inner { animation: none !important; opacity: 1 !important; transform: scale(1) !important; }
   }
 
-  /* -------- responsive -------- */
-  /* below 1480px: stack — MAP FIRST (mobile preference), panel below; the
-     stage keeps the window's own aspect ratio so the full map shows */
+  /* on mobile, labels hide and only the ringed photo/dot remains — same
+     treatment as the critical-shifts map's markers, so the (now much
+     shorter) map stays readable instead of crowded with overlapping pills */
   @media (max-width: 1480px) {
-    .bwc-hero { min-height: auto; display: block; }
-    .bwc-layout { flex-direction: column-reverse; gap: 20px; padding: 20px; }
-    .bwc-stage-col { flex: none; width: 100%; }
-    .bwc-stage { aspect-ratio: 620 / 470; height: auto; max-height: none; }
-    .bio-panel { flex: none; max-width: none; width: 100%; }
-    .bwc-marker { width: var(--hit-m, 6.6%); }
+    .bwc-marker { width: 52px; height: 52px; }
+    .bwc-label { display: none; }
   }
 </style>

@@ -29,7 +29,12 @@ html { scroll-behavior: smooth; }
 
 body {
   font-family: var(--font-body);
-  background: var(--paper);
+  /* the two landing pages (bioregions/critical-shifts index) override this
+     with their own ocean/sky background; everywhere else — notably the
+     diagram detail pages — this is what shows around the SVG canvas, so it
+     must match the canvas's own background (.flow-wrap svg), not the
+     warmer --paper cream. */
+  background: var(--paper-raised);
   color: var(--ink);
   line-height: 1.6;
   font-size: 16px;
@@ -42,8 +47,82 @@ h1, h2, h3, h4 {
   letter-spacing: -0.01em;
 }
 
+/* Shared hero block — both landing pages (EuropeMap.astro, CriticalShiftsMap.astro)
+   now show the identical eyebrow/title/intro copy/toggle; only the content
+   below the divider (and the map/image) differs between them. */
+.hero-title {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 26px;
+  line-height: 1.15;
+  color: var(--ink-strong);
+}
+.hero-intro {
+  margin-top: 12px;
+  font-family: var(--font-body);
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--ink);
+}
+.hero-intro strong {
+  font-weight: 700;
+  color: var(--ink-strong);
+}
+
+/* Big view toggle — replaces both the old small inline nav pill AND the
+   list sub-heading (it names the section itself, so a separate "Bioregions"/
+   "Critical shifts" heading right above it would just repeat it). Sits below
+   the divider, spanning the sidebar's full content width. One seamless
+   segmented control — a single shared border/background, no gap between the
+   two halves — not two separate buttons. */
+.view-toggle-big {
+  display: flex;
+  flex-shrink: 0;
+  margin-bottom: 16px;
+  border: 1px solid rgba(32, 64, 79, 0.18);
+  border-radius: 10px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.7);
+}
+.view-toggle-big a {
+  flex: 1 1 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 50px;
+  font-family: var(--font-body);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  text-decoration: none;
+  text-align: center;
+  color: var(--ink-strong);
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.view-toggle-big a:hover:not(.active) {
+  /* explicit color override: without it, the site-wide a:hover rule
+     (color: var(--bwl-secondary), i.e. gold) would win here */
+  background: rgba(32, 64, 79, 0.08);
+  color: var(--ink-strong);
+}
+.view-toggle-big a.active {
+  background: var(--bwl-primary);
+  color: #fff;
+}
+
 a { color: var(--ink-strong); }
 a:hover { color: var(--bwl-secondary); }
+
+/* Shared card-hover treatment across all four SVG diagrams (FlowDiagram,
+   VerticalFlow, ShiftDiagram, VerticalShiftDiagram) — same subtle opaque
+   wash as the list cards on the main map pages, layered on top of each
+   diagram's own opacity-based connection highlighting. Each card's
+   background rect carries the .card-bg class for this to target; not
+   scoped, since these components each have their own Astro style block. */
+.flow-wrap svg .card:hover .card-bg {
+  fill: #f5f6f7;
+}
 
 .wrap {
   max-width: 1080px;

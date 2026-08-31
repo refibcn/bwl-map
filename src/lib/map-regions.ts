@@ -10,8 +10,10 @@ export interface MapRegion {
   desc: string;
   imageFile: string | null;
   imageUrl: string | null;
-  x: number; // percent of stage
+  x: number; // percent of stage (legacy static-SVG projection, unused by the MapLibre map)
   y: number;
+  lat: number;
+  lng: number;
   ring: string;
 }
 
@@ -34,6 +36,8 @@ export function buildMapRegions(entries: BioregionEntry[]): MapRegion[] {
       imageUrl: b.imageUrl,
       x,
       y,
+      lat: pos.lat,
+      lng: pos.lng,
       ring: pos.ring,
     });
   }

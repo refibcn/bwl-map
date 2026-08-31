@@ -1,7 +1,6 @@
 ---
 import { getCollection } from "astro:content";
 import BaseLayout from "../../layouts/BaseLayout.astro";
-import SiteNav from "../../components/SiteNav.astro";
 import FlowDiagram from "../../components/FlowDiagram.astro";
 
 export async function getStaticPaths() {
@@ -21,14 +20,14 @@ const base = import.meta.env.BASE_URL.endsWith("/") ? import.meta.env.BASE_URL :
 ---
 
 <BaseLayout title={`${data.name} — BWL portfolio`}>
-  <SiteNav current="map" />
-  <a class="back-link" href={base} aria-label="Back to the map">← Map</a>
+  <a class="back-link" href={base} aria-label="Back to the map">← Bioregions</a>
   <nav class="view-switch" aria-label="Layout view">
     <a class="active" href={`${base}bioregions/${data.slug}/`}>Horizontal</a>
     <a href={`${base}bioregions/${data.slug}/vertical/`}>Vertical</a>
   </nav>
   <FlowDiagram
     bioregionName={data.name}
+    bioregionSlug={data.slug}
     bioregionDescription={bioDescription}
     bioregionCountry={data.country}
     bioregionImageUrl={data.imageUrl}
@@ -53,8 +52,10 @@ const base = import.meta.env.BASE_URL.endsWith("/") ? import.meta.env.BASE_URL :
     background: var(--paper-raised);
     color: var(--bwl-primary);
     font-family: var(--font-body);
-    font-size: 13px;
+    font-size: 12px;
     font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
     text-decoration: none;
     box-shadow: 0 1px 4px rgba(32, 64, 79, 0.12);
     transition: background 0.15s ease, border-color 0.15s ease;

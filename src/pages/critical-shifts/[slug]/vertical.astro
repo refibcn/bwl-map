@@ -1,38 +1,40 @@
 ---
 import { getCollection } from "astro:content";
 import BaseLayout from "../../../layouts/BaseLayout.astro";
-import VerticalFlow from "../../../components/VerticalFlow.astro";
+import VerticalShiftDiagram from "../../../components/VerticalShiftDiagram.astro";
+import { buildShiftPages } from "../../../lib/shift-pages";
 
 export async function getStaticPaths() {
-  const all = await getCollection("bioregions");
-  return all.map((entry) => ({
-    params: { slug: entry.data.slug },
-    props: { entry },
+  const [bioEntries, shiftEntries] = await Promise.all([
+    getCollection("bioregions"),
+    getCollection("shifts"),
+  ]);
+  const shifts = buildShiftPages(
+    bioEntries.map((b) => b.data),
+    shiftEntries.map((s) => s.data)
+  );
+  return shifts.map((s) => ({
+    params: { slug: s.slug },
+    props: { shift: s },
   }));
 }
 
-const { entry } = Astro.props as any;
-const data = entry.data;
+const { shift } = Astro.props as any;
 const base = import.meta.env.BASE_URL.endsWith("/") ? import.meta.env.BASE_URL : import.meta.env.BASE_URL + "/";
-const bioDescription = data.shortNarrative || data.intro;
 ---
 
-<BaseLayout title={`${data.name} — vertical view`}>
-  <a class="back-link" href={base} aria-label="Back to the map">← Bioregions</a>
+<BaseLayout title={`${shift.name} — vertical view`}>
+  <a class="back-link" href={`${base}critical-shifts/`} aria-label="Back to all critical shifts">← Critical shifts</a>
   <nav class="view-switch" aria-label="Layout view">
-    <a href={`${base}bioregions/${data.slug}/`}>Horizontal</a>
-    <a class="active" href={`${base}bioregions/${data.slug}/vertical/`}>Vertical</a>
+    <a href={`${base}critical-shifts/${shift.slug}/`}>Horizontal</a>
+    <a class="active" href={`${base}critical-shifts/${shift.slug}/vertical/`}>Vertical</a>
   </nav>
-  <VerticalFlow
-    bioregionName={data.name}
-    bioregionSlug={data.slug}
-    bioregionDescription={bioDescription}
-    bioregionCountry={data.country}
-    bioregionImageUrl={data.imageUrl}
-    bioregionImageFile={data.imageFile}
-    shifts={data.criticalShifts}
-    innovations={data.systemicInnovations}
-  />
+  <VerticalShiftDiagram shift={shift} bioregions={shift.bioregions} innovations={shift.innovations} />
+  {shift.bioregions.length === 0 && (
+    <p class="empty-note">
+      No published systemic innovations for this critical shift yet — the page will fill in as bioregions link their work.
+    </p>
+  )}
 </BaseLayout>
 
 <style>
@@ -93,5 +95,15 @@ const bioDescription = data.shortNarrative || data.intro;
   .view-switch a.active {
     background: var(--bwl-primary);
     color: #fff;
+  }
+
+  .empty-note {
+    max-width: 1080px;
+    margin: 2rem auto 0;
+    padding: 0 1.5rem;
+    text-align: center;
+    color: var(--mist);
+    font-family: var(--font-body);
+    font-size: 14px;
   }
 </style>

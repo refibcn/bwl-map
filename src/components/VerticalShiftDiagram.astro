@@ -1,0 +1,502 @@
+---
+/**
+ * Vertical shift diagram — the shift-centric counterpart of VerticalFlow,
+ * for critical-shift detail pages. Strict three-band structure, top to
+ * bottom:
+ *
+ *   1. the critical shift card (text only — shifts carry no image today)
+ *   2. all bioregions working on it in ONE horizontal row (compact cards,
+ *      image on the left of each)
+ *   3. all systemic innovations (of those bioregions, tagged with this
+ *      shift) in ONE OR TWO horizontal rows (image on TOP of each card)
+ *
+ * Unlike VerticalFlow (where one innovation can fan out to several shifts),
+ * each innovation here belongs to exactly one bioregion, so every SI card
+ * has a single connector — no primary/dashed multi-tag branching needed.
+ * Hovering the shift card highlights everything; hovering a bioregion
+ * highlights its innovations; hovering an innovation highlights its
+ * bioregion + the shift.
+ */
+import SVGTextBlock from "./SVGTextBlock.astro";
+import { notionImageUrl } from "../lib/images";
+import { wrapToWidth, capLines } from "../lib/text";
+import { shiftColor } from "../lib/shift-pages";
+import { roundedRectPath } from "../lib/shapes";
+import type { ShiftBioRef, ShiftInnovationRef } from "../lib/shift-pages";
+
+interface Props {
+  shift: {
+    name: string;
+    emoji: string | null;
+    shift: string;
+    leveragePoint: string;
+    slug: string;
+  };
+  bioregions: ShiftBioRef[];
+  innovations: ShiftInnovationRef[];
+}
+
+const { shift, bioregions, innovations } = Astro.props as Props;
+
+const base = import.meta.env.BASE_URL.endsWith("/") ? import.meta.env.BASE_URL : import.meta.env.BASE_URL + "/";
+function withBase(path: string | null): string | null {
+  if (!path) return null;
+  if (/^(https?:|data:)/i.test(path)) return path;
+  if (base && base !== "/") return `${base}${path}`;
+  return path;
+}
+
+function resolveImageSource(file: string | null | undefined, url: string | null | undefined): string | null {
+  const local = notionImageUrl(file);
+  if (local) return local;
+  return withBase(url || null);
+}
+
+const COLOR = shiftColor(shift.slug);
+
+// --- canvas ---
+const W = 1700;
+const margin = { top: 90, right: 60, bottom: 60, left: 60 };
+
+// --- critical shift card (top, text only — centred) ---
+const shiftW = 560;
+const shiftX = W / 2;
+const shiftLeft = shiftX - shiftW / 2;
+const shiftTop = margin.top;
+const shiftTextW = shiftW - 48;
+const shiftNameLines = capLines(wrapToWidth(`${shift.emoji || ""} ${shift.name}`.trim(), shiftTextW, 22, "display"), 2);
+const shiftLeverageLines = capLines(wrapToWidth(shift.leveragePoint || "", shiftTextW, 11, "body"), 3);
+const shiftDescLines = capLines(wrapToWidth(shift.shift || "", shiftTextW, 11, "body"), 4);
+const shiftNameLineHeight = 26;
+const shiftBodyLineHeight = 15;
+const shiftTextHeight =
+  shiftNameLines.length * shiftNameLineHeight +
+  10 +
+  shiftLeverageLines.length * shiftBodyLineHeight +
+  10 +
+  shiftDescLines.length * shiftBodyLineHeight;
+const shiftH = Math.max(140, shiftTextHeight + 48);
+const shiftBottom = shiftTop + shiftH;
+const shiftTextTop = shiftTop + (shiftH - shiftTextHeight) / 2;
+const shiftNameY = shiftTextTop + shiftNameLineHeight * 0.8;
+const shiftLeverageY = shiftNameY + shiftNameLines.length * shiftNameLineHeight + 10;
+const shiftDescY = shiftLeverageY + shiftLeverageLines.length * shiftBodyLineHeight + 10;
+
+// --- bioregions: ONE horizontal row, compact cards (shrink to fit, like
+// VerticalFlow's critical-shift row) — image on the left of each ---
+const bioCount = Math.max(1, bioregions.length);
+const bioGap = bioCount > 9 ? 8 : 12;
+const bioW = Math.min(180, Math.floor((W - margin.left - margin.right - (bioCount - 1) * bioGap) / bioCount));
+const BIO_IMG_W = 56;
+const BIO_IMG_GAP = 10;
+const bioCards = bioregions.map((b) => {
+  const hasImage = !!resolveImageSource(b.imageFile, b.imageUrl);
+  const textW = hasImage ? bioW - BIO_IMG_W - BIO_IMG_GAP - 12 : bioW - 24;
+  const nameLines = wrapToWidth(b.name || "", textW, 13, "display");
+  const countryLines = wrapToWidth(b.country || "", textW, 9, "display");
+  return { ...b, hasImage, nameLines, countryLines };
+});
+const bioH = bioCards.length
+  ? Math.max(72, ...bioCards.map((c) => 20 + c.nameLines.length * 15 + (c.countryLines.length ? 4 + c.countryLines.length * 11 : 0) + 14))
+  : 72;
+const bioRowW = bioCards.length * bioW + Math.max(0, bioCards.length - 1) * bioGap;
+const bioStartX = (W - bioRowW) / 2;
+const bioTop = shiftBottom + 115;
+const bioBottom = bioTop + bioH;
+const bioX = (i: number) => bioStartX + i * (bioW + bioGap) + bioW / 2;
+const bioLeftX = (i: number) => bioStartX + i * (bioW + bioGap);
+const bioIndexBySlug = new Map(bioCards.map((b, i) => [b.slug, i]));
+
+// --- systemic innovations: ONE or TWO horizontal rows (same sizing as
+// VerticalFlow) ---
+const sisW = 180;
+const sisImgH = 135;
+const sisCardH = 176;
+const sisGap = 12;
+
+// Order innovations by their bioregion (so each bioregion's fan stays
+// local), unmatched ones last.
+const orderedInnovations = [...innovations].sort((a, b) => {
+  const ia = bioIndexBySlug.get(a.bioregionSlug) ?? 999;
+  const ib = bioIndexBySlug.get(b.bioregionSlug) ?? 999;
+  return ia - ib;
+});
+
+const sisCards = orderedInnovations.map((inv) => {
+  const hasImage = !!resolveImageSource(inv.imageFile, inv.imageUrl);
+  const nameLines = wrapToWidth(inv.name || "", sisW - 24, 12, "display");
+  const descLines = wrapToWidth(inv.description || "", sisW - 24, 9, "body");
+  const contentH = sisImgH + 8 + nameLines.length * 14 + 3 + descLines.length * 12 + 16;
+  return { ...inv, hasImage, nameLines, descLines, cardH: Math.max(sisCardH, contentH) };
+});
+
+const perLine = Math.max(1, Math.floor((W - margin.left - margin.right + sisGap) / (sisW + sisGap)));
+const rowCount = Math.ceil(sisCards.length / perLine);
+const rowHeights: number[] = [];
+for (let r = 0; r < rowCount; r++) {
+  const count = Math.min(perLine, sisCards.length - r * perLine);
+  rowHeights.push(Math.max(...sisCards.slice(r * perLine, r * perLine + count).map((c) => c.cardH)));
+}
+let yCum = bioBottom + 95;
+const rowYs = rowHeights.map((h) => {
+  const y = yCum;
+  yCum += h + 16;
+  return y;
+});
+const sisPositions = sisCards.map((_, j) => {
+  const row = Math.floor(j / perLine);
+  const count = Math.min(perLine, sisCards.length - row * perLine);
+  const rowWidth = count * sisW + (count - 1) * sisGap;
+  const startX = margin.left + (W - margin.left - margin.right - rowWidth) / 2;
+  return {
+    x: startX + (j % perLine) * (sisW + sisGap),
+    y: rowYs[row],
+  };
+});
+const sisBottom = rowYs.length ? rowYs[rowYs.length - 1] + rowHeights[rowHeights.length - 1] : bioBottom + 95;
+const height = sisBottom + margin.bottom;
+
+// --- bus tree: shift → bioregions ---
+const busY = shiftBottom + 55;
+const busLeft = margin.left + 40;
+const busRight = W - margin.right - 40;
+
+// SI → bioregion connectors all share ONE horizontal bus line (row 1's
+// height) — same fix and rationale as VerticalFlow.astro: without it, a
+// second row's bus lands at a different height that often falls inside an
+// earlier row's card band, reading as a line hidden behind cards.
+const sisBusY = (bioBottom + rowYs[0]) / 2;
+
+function ortho(x1: number, y1: number, x2: number, y2: number, busY: number) {
+  return `M${x1},${y1} L${x1},${busY} L${x2},${busY} L${x2},${y2}`;
+}
+---
+
+<div class="flow-wrap">
+  <svg
+    width={W}
+    height="auto"
+    viewBox={`0 0 ${W} ${height}`}
+    preserveAspectRatio="xMidYMid meet"
+    role="img"
+    xmlns="http://www.w3.org/2000/svg"
+  >
+    <title>Vertical layout — {shift.name}</title>
+    <desc>
+      {shift.name} on top, the bioregions working on it in a row, then their systemic innovations in horizontal rows.
+    </desc>
+
+    <defs>
+      <filter id="softShadow" x="-20%" y="-20%" width="140%" height="140%">
+        <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#20404f" flood-opacity="0.08" />
+      </filter>
+      {/* explicit clip paths keep every card image inside its own card —
+          only the corners on the card's own outer edge are rounded (image
+          on left -> left corners; image on top -> top corners) */}
+      {bioCards.map((b, i) => (
+        <clipPath id={`clip-bio-${b.slug}`}>
+          <path d={roundedRectPath(bioLeftX(i), bioTop, BIO_IMG_W, bioH, 10, true, false, false, true)} />
+        </clipPath>
+      ))}
+      {sisPositions.map((pos, j) => {
+        const inv = sisCards[j];
+        return (
+          <clipPath id={`clip-${inv.slug}`}>
+            <path d={roundedRectPath(pos.x, pos.y, sisW, sisImgH, 10, true, true, false, false)} />
+          </clipPath>
+        );
+      })}
+    </defs>
+
+    {/* Bus tree: shift → bioregions */}
+    <path class="conn conn-shift-bus" data-from="shift" data-to="shift" d={`M${shiftX},${shiftBottom} L${shiftX},${busY} L${busLeft},${busY} L${busRight},${busY}`} fill="none" stroke={COLOR} stroke-width="2.5" opacity="0.35" stroke-linejoin="round" />
+    {bioCards.map((b, i) => (
+      <path
+        class={`conn conn-drop conn-drop-${b.slug}`}
+        data-from="shift"
+        data-to={`bio:${b.slug}`}
+        d={`M${bioX(i)},${busY} L${bioX(i)},${bioTop}`}
+        fill="none"
+        stroke={COLOR}
+        stroke-width="2.5"
+        opacity="0.4"
+      />
+    ))}
+
+    {/* Innovations → their bioregion (each SI belongs to exactly one) */}
+    {sisCards.map((inv, j) => {
+      const fromX = sisPositions[j].x + sisW / 2;
+      const fromY = sisPositions[j].y;
+      const bioIdx = bioIndexBySlug.get(inv.bioregionSlug);
+      if (bioIdx === undefined) return null;
+      return (
+        <path
+          class="conn conn-bio-sis"
+          data-from={`sis:${inv.slug}`}
+          data-to={`bio:${inv.bioregionSlug}`}
+          d={ortho(fromX, fromY, bioX(bioIdx), bioBottom, sisBusY)}
+          fill="none"
+          stroke={COLOR}
+          stroke-width="2.5"
+          opacity="0.45"
+        />
+      );
+    })}
+
+    {/* Critical shift card */}
+    <g class="card shift-card" data-el="shift" data-root="shift" tabindex="0">
+      <rect class="card-bg" x={shiftLeft} y={shiftTop} width={shiftW} height={shiftH} rx="18" fill="#ffffff" stroke={COLOR} stroke-width="2" filter="url(#softShadow)" />
+      <SVGTextBlock
+        lines={shiftNameLines}
+        x={shiftX}
+        y={shiftNameY}
+        lineHeight="1.2em"
+        anchor="middle"
+        style="font-family:var(--font-display);font-size:22px;font-weight:bold;fill:var(--bwl-primary);"
+      />
+      <SVGTextBlock
+        lines={shiftLeverageLines}
+        x={shiftX}
+        y={shiftLeverageY}
+        lineHeight="1.3em"
+        anchor="middle"
+        style="font-family:var(--font-body);font-size:11px;fill:var(--bwl-secondary);font-weight:bold;letter-spacing:0.02em;"
+      />
+      <SVGTextBlock
+        lines={shiftDescLines}
+        x={shiftX}
+        y={shiftDescY}
+        lineHeight="1.3em"
+        anchor="middle"
+        style="font-family:var(--font-body);font-size:11px;fill:var(--bwl-text);opacity:0.85;"
+      />
+    </g>
+
+    {/* Bioregion cards (one row) — clickable, like the horizontal view,
+        image on the left when the bioregion has one */}
+    {bioCards.map((b, i) => {
+      const x = bioStartX + i * (bioW + bioGap);
+      const bioImageSrc = resolveImageSource(b.imageFile, b.imageUrl);
+      const textX = b.hasImage ? x + BIO_IMG_W + BIO_IMG_GAP : x + 12;
+      const nameY = bioTop + 16 + 15 * 0.8;
+      const countryY = nameY + b.nameLines.length * 15 + 4;
+      return (
+        <a class="card-link" href={`${base}bioregions/${b.slug}/`}>
+          <g class={`card bio-card bio-${b.slug}`} data-el={`bio:${b.slug}`} tabindex="0">
+            <rect class="card-bg" x={x} y={bioTop} width={bioW} height={bioH} rx="10" fill="#ffffff" stroke="var(--bwl-primary)" stroke-width="2" filter="url(#softShadow)" />
+            {bioImageSrc && (
+              <image
+                x={x}
+                y={bioTop}
+                width={BIO_IMG_W}
+                height={bioH}
+                href={bioImageSrc}
+                clip-path={`url(#clip-bio-${b.slug})`}
+                preserveAspectRatio="xMidYMid slice"
+              />
+            )}
+            {/* Redraw the card border over the image edge — the image's
+                flush-left edge otherwise paints over (and looks like it cuts
+                off) the card's own outline along that side. */}
+            {bioImageSrc && (
+              <rect x={x} y={bioTop} width={bioW} height={bioH} rx="10" fill="none" stroke="var(--bwl-primary)" stroke-width="2" />
+            )}
+            <SVGTextBlock
+              lines={b.nameLines}
+              x={textX}
+              y={nameY}
+              lineHeight="1.2em"
+              anchor="start"
+              style="font-family:var(--font-display);font-size:13px;font-weight:bold;fill:var(--bwl-primary);"
+            />
+            {b.countryLines.length > 0 && (
+              <SVGTextBlock
+                lines={b.countryLines}
+                x={textX}
+                y={countryY}
+                lineHeight="1.2em"
+                anchor="start"
+                style="font-family:var(--font-display);font-size:9px;font-weight:bold;fill:var(--bwl-secondary);letter-spacing:0.1em;text-transform:uppercase;"
+              />
+            )}
+          </g>
+        </a>
+      );
+    })}
+
+    {/* Systemic innovation cards (image on top) */}
+    {sisCards.map((inv, j) => {
+      const { x, y } = sisPositions[j];
+      const sisImageSrc = resolveImageSource(inv.imageFile, inv.imageUrl);
+      const nameY = y + sisImgH + 8 + 14 * 0.8;
+      const descY = nameY + inv.nameLines.length * 14 + 3;
+      return (
+        <g class="card sis-card" data-el={`sis:${inv.slug}`} tabindex="0">
+          <rect class="card-bg" x={x} y={y} width={sisW} height={inv.cardH} rx="10" fill="#ffffff" stroke="var(--line-strong)" stroke-width="1.5" filter="url(#softShadow)" />
+          {/* image + external-link badge share one clickable region: the
+              whole image is the hit area (not just the small badge), so
+              there's a generous margin of error. The badge sits in the
+              image's own top-right corner, inset by the same padding used
+              elsewhere on the card, with an opaque background so it reads
+              clearly over any photo without covering the text below. */}
+          {inv.externalUrl ? (
+            <a href={inv.externalUrl} target="_blank" rel="noopener" aria-label={`Open ${inv.name} — external link`}>
+              {sisImageSrc && (
+                <image
+                  x={x}
+                  y={y}
+                  width={sisW}
+                  height={sisImgH}
+                  href={sisImageSrc}
+                  clip-path={`url(#clip-${inv.slug})`}
+                  preserveAspectRatio="xMidYMid slice"
+                />
+              )}
+              <circle cx={x + sisW - 16} cy={y + 16} r="10" fill="var(--paper-raised)" filter="url(#softShadow)" />
+              <text x={x + sisW - 16} y={y + 20} text-anchor="middle" font-size="11" fill="var(--bwl-primary)" font-family="var(--font-body)" font-weight="bold">↗</text>
+            </a>
+          ) : (
+            sisImageSrc && (
+              <image
+                x={x}
+                y={y}
+                width={sisW}
+                height={sisImgH}
+                href={sisImageSrc}
+                clip-path={`url(#clip-${inv.slug})`}
+                preserveAspectRatio="xMidYMid slice"
+              />
+            )
+          )}
+          <rect x={x} y={y} width={sisW} height={inv.cardH} rx="10" fill="none" stroke="var(--line-strong)" stroke-width="1.5" />
+          <SVGTextBlock
+            lines={inv.nameLines}
+            x={x + 12}
+            y={nameY}
+            lineHeight="1.15em"
+            anchor="start"
+            style="font-family:var(--font-display);font-size:12px;font-weight:bold;fill:var(--bwl-primary);"
+          />
+          <SVGTextBlock
+            lines={inv.descLines}
+            x={x + 12}
+            y={descY}
+            lineHeight="1.3em"
+            anchor="start"
+            style="font-family:var(--font-body);font-size:9px;fill:var(--bwl-text);opacity:0.85;"
+          />
+        </g>
+      );
+    })}
+  </svg>
+</div>
+
+<script>
+  (function () {
+    const svg = document.querySelector<SVGSVGElement>(".flow-wrap svg");
+    if (!svg) return;
+
+    function activateEl(elId: string) {
+      svg!.classList.add("has-active");
+      const match = new Set([elId]);
+      svg!.querySelectorAll<SVGPathElement>(".conn").forEach((path) => {
+        const from = path.dataset.from;
+        const to = path.dataset.to;
+        if (from === elId || to === elId) {
+          if (from) match.add(from);
+          if (to) match.add(to);
+        }
+      });
+      // Hovering a systemic innovation also highlights the diagram's root
+      // card (the critical shift card here), so the innovation -> bioregion
+      // -> root chain lights up end to end.
+      if (elId.startsWith("sis:")) {
+        const root = svg!.querySelector<SVGElement>("[data-root]");
+        if (root?.dataset.el) match.add(root.dataset.el);
+      }
+      svg!.querySelectorAll<SVGElement>(".card, .conn").forEach((el) => {
+        if (el.classList.contains("conn")) {
+          const from = el.dataset.from;
+          const to = el.dataset.to;
+          el.classList.toggle("active", !!from && !!to && match.has(from) && match.has(to));
+        } else {
+          el.classList.toggle("active", !!el.dataset.el && match.has(el.dataset.el));
+        }
+      });
+    }
+
+    function deactivate() {
+      svg!.classList.remove("has-active");
+      svg!.querySelectorAll<SVGElement>(".active").forEach((el) => el.classList.remove("active"));
+    }
+
+    svg.querySelectorAll<SVGGElement>(".shift-card, .bio-card, .sis-card").forEach((g) => {
+      g.addEventListener("mouseenter", () => activateEl(g.dataset.el!));
+      g.addEventListener("mouseleave", deactivate);
+      g.addEventListener("focus", () => activateEl(g.dataset.el!));
+      g.addEventListener("blur", deactivate);
+    });
+
+    svg.querySelectorAll<SVGPathElement>(".conn").forEach((path) => {
+      path.addEventListener("mouseenter", () => activateEl(path.dataset.from!));
+      path.addEventListener("mouseleave", deactivate);
+    });
+
+    // Open centred on the critical shift card (long pages scroll up/down).
+    function centerOnShift() {
+      const card = svg!.querySelector<SVGGElement>(".shift-card");
+      if (!card) return;
+      const r = card.getBoundingClientRect();
+      const y = window.scrollY + r.top - (window.innerHeight - r.height) / 2;
+      window.scrollTo(0, Math.max(0, y));
+    }
+    if (document.readyState === "complete") requestAnimationFrame(centerOnShift);
+    else window.addEventListener("load", () => requestAnimationFrame(centerOnShift));
+  })();
+</script>
+
+<style>
+  .flow-wrap {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    min-height: 100vh;
+    min-height: 100dvh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .flow-wrap svg {
+    display: block;
+    width: auto;
+    height: auto;
+    margin: 0 auto;
+    background: var(--paper-raised);
+  }
+
+  .flow-wrap svg .conn {
+    transition: opacity 0.25s ease, stroke-width 0.25s ease;
+    cursor: pointer;
+  }
+  .flow-wrap svg .card {
+    transition: opacity 0.25s ease;
+  }
+  .flow-wrap svg .card:focus {
+    outline: none;
+  }
+
+  .flow-wrap svg.has-active .conn:not(.active) {
+    opacity: 0.08 !important;
+  }
+  .flow-wrap svg.has-active .card:not(.active) {
+    opacity: 0.25;
+  }
+
+  .flow-wrap svg.has-active .conn.active {
+    opacity: 0.95 !important;
+    stroke-width: 4px;
+  }
+  .flow-wrap svg.has-active .card.active {
+    opacity: 1;
+  }
+</style>

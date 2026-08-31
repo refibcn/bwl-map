@@ -2,97 +2,97 @@
   "image": {
     "source": "/home/gq/refi-bcn-os/bwl-map/----image-generation-prompt-----a-flat--clean-vect.png",
     "publicPath": "/bwl-map/critical-shifts-landscape.png",
-    "width": 1024,
+    "width": 956,
     "height": 572,
-    "aspectRatio": "1024/572"
+    "aspectRatio": "956/572"
   },
   "positions": [
     {
       "slug": "education-knowledge",
       "name": "Education & Knowledge",
       "emoji": "📚",
-      "x": 52,
-      "y": 86,
+      "x": 91.77,
+      "y": 16.7,
       "rationale": "Bottom-centre section, below the crop fields."
     },
     {
       "slug": "ecosystems-biodiversity",
       "name": "Ecosystems & Biodiversity",
       "emoji": "🌳",
-      "x": 86,
-      "y": 86,
+      "x": 92.31,
+      "y": 83.5,
       "rationale": "Bottom-right corner — open fields/coast terrace."
     },
     {
       "slug": "policy-advocacy",
       "name": "Policy & Advocacy",
       "emoji": "⚖️",
-      "x": 74,
-      "y": 9,
+      "x": 29.65,
+      "y": 79.4,
       "rationale": "Open sky right of the kite and left of the forest ridge — away from the city cluster."
     },
     {
       "slug": "energy-carbon",
       "name": "Energy & Carbon",
       "emoji": "🔆",
-      "x": 70,
-      "y": 28,
+      "x": 70.03,
+      "y": 32.9,
       "rationale": "On the solar array and transmission tower complex in the upper-right quadrant."
     },
     {
       "slug": "finance-ownership",
       "name": "Finance & Ownership",
       "emoji": "👛",
-      "x": 86,
-      "y": 62,
+      "x": 67.46,
+      "y": 75.9,
       "rationale": "Calm coastal/field terrace south-east of the city — kept clear of the community card above."
     },
     {
       "slug": "housing-infrastructure",
       "name": "Housing & Infrastructure",
       "emoji": "🏠",
-      "x": 34,
-      "y": 34,
+      "x": 29.22,
+      "y": 32.3,
       "rationale": "Over the compact town / buildings on the left side of the river."
     },
     {
       "slug": "culture-heritage",
       "name": "Culture & Heritage",
       "emoji": "🎨",
-      "x": 90,
-      "y": 36,
+      "x": 88.88,
+      "y": 44.5,
       "rationale": "On the amphitheatre / theatre structure on the right — a clear heritage/culture landmark."
     },
     {
       "slug": "community-self-governance",
       "name": "Community & Self-Governance",
       "emoji": "🪢",
-      "x": 74,
-      "y": 46,
+      "x": 48.29,
+      "y": 55.7,
       "rationale": "Flat olive band east of the town — open ground with room around it."
     },
     {
       "slug": "health-social-services",
       "name": "Health & Social Services",
       "emoji": "❤️‍🩹",
-      "x": 28,
-      "y": 50,
+      "x": 26.86,
+      "y": 51.1,
       "rationale": "Near the community buildings on the lower-left side of the town."
     },
     {
       "slug": "value-chains-economic-development",
       "name": "Value Chains & Economic Development",
       "emoji": "⛓️",
-      "x": 56,
-      "y": 52,
+      "x": 34.68,
+      "y": 63.6,
       "rationale": "Mid-river / market zone where transport, trade and production connect."
     },
     {
       "slug": "food-agriculture",
       "name": "Food & Agriculture",
       "emoji": "🍎",
-      "x": 48,
-      "y": 64,
+      "x": 49.25,
+      "y": 82.7,
       "rationale": "Centre of the crop fields, farms and orchards in the middle of the image."
     },
     {
@@ -100,15 +100,15 @@
       "name": "Tourism, Recreation & Hospitality",
       "emoji": "🥾",
       "x": 10,
-      "y": 72,
+      "y": 61.2,
       "rationale": "Over the sailboat / coastal area — recreation and coastal tourism."
     },
     {
       "slug": "youth-opportunities",
       "name": "Youth & Opportunities",
       "emoji": "🧒",
-      "x": 16,
-      "y": 84,
+      "x": 53.53,
+      "y": 13.4,
       "rationale": "Bottom-left part — by the shoreline, below the sailboat."
     }
   ]

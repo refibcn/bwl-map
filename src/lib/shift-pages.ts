@@ -1,5 +1,6 @@
 import type { BioregionEntry } from "./notion-loader";
 import type { ShiftRecord } from "./shift-loader";
+import { SHIFT_COLORS, DEFAULT_SHIFT_COLOR } from "../data/critical-shift-colors";
 
 /**
  * Critical Shifts section — shift-centric view built from the SAME Notion
@@ -101,19 +102,11 @@ export function buildShiftPages(entries: BioregionEntry[], shifts: ShiftRecord[]
   return pages.sort((a, b) => a.name.localeCompare(b.name));
 }
 
-/** Stable colour per shift (same colour on every page that mentions it). */
+/**
+ * Stable colour per shift (same colour on every page that mentions it).
+ * Explicit per-slug lookup (see src/data/critical-shift-colors.ts) — every
+ * shift gets its own unique colour; unmapped slugs fall back to a default.
+ */
 export function shiftColor(slug: string): string {
-  const PALETTE = [
-    "#20404F", // BWL primary
-    "#E2AD4F", // BWL secondary
-    "#5C8A7A", // muted teal
-    "#C78A1D", // darker gold
-    "#4A7C6F", // sage
-    "#8B5A2B", // warm brown
-    "#3D6B66", // deep sage
-    "#D4A84B", // light gold
-  ];
-  let h = 0;
-  for (const ch of slug) h = (h * 31 + ch.charCodeAt(0)) % 997;
-  return PALETTE[h % PALETTE.length];
+  return SHIFT_COLORS[slug] ?? DEFAULT_SHIFT_COLOR;
 }

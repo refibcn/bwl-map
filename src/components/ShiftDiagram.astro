@@ -10,6 +10,7 @@ import SVGTextBlock from "./SVGTextBlock.astro";
 import { notionImageUrl } from "../lib/images";
 import { wrapToWidth, capLines } from "../lib/text";
 import { shiftColor } from "../lib/shift-pages";
+import { roundedRectPath } from "../lib/shapes";
 import type { ShiftBioRef, ShiftInnovationRef } from "../lib/shift-pages";
 
 interface Props {
@@ -159,10 +160,12 @@ function curve(x1: number, y1: number, x2: number, y2: number, strength = 0.5) {
       <filter id="softShadow" x="-20%" y="-20%" width="140%" height="140%">
         <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#20404f" flood-opacity="0.08" />
       </filter>
-      {/* explicit clip rects keep every card image inside its own card */}
+      {/* explicit clip paths keep every card image inside its own card —
+          only the corners on the card's own outer edge are rounded (image
+          on top -> top corners; image on left -> left corners) */}
       {bioCards.map((b, i) => (
         <clipPath id={`clip-bio-${b.slug}`}>
-          <rect x={bioColLeft} y={bioPositions[i] - b.cardHeight / 2} width={bioW} height={BIO_IMAGE_H} rx="14" />
+          <path d={roundedRectPath(bioColLeft, bioPositions[i] - b.cardHeight / 2, bioW, BIO_IMAGE_H, 14, true, true, false, false)} />
         </clipPath>
       ))}
       {sisCards.map((inv, j) => {
@@ -171,7 +174,7 @@ function curve(x1: number, y1: number, x2: number, y2: number, strength = 0.5) {
         const imgW = Math.min(inv.cardHeight, sisW);
         return (
           <clipPath id={`clip-sis-${inv.slug}`}>
-            <rect x={sisX} y={imgY} width={imgW} height={inv.cardHeight} rx="10" />
+            <path d={roundedRectPath(sisX, imgY, imgW, inv.cardHeight, 10, true, false, false, true)} />
           </clipPath>
         );
       })}
@@ -213,12 +216,13 @@ function curve(x1: number, y1: number, x2: number, y2: number, strength = 0.5) {
     {/* Critical shift card */}
     <g class="card shift-card" data-el="shift" data-root="shift" tabindex="0">
       <rect
+        class="card-bg"
         x={shiftColLeft}
         y={shiftY - shiftCardHeight / 2}
         width={shiftW}
         height={shiftCardHeight}
         rx="18"
-        fill="var(--paper-raised)"
+        fill="#ffffff"
         stroke={COLOR}
         stroke-width="2"
         filter="url(#softShadow)"
@@ -267,12 +271,13 @@ function curve(x1: number, y1: number, x2: number, y2: number, strength = 0.5) {
         <a class="card-link" href={`${base}bioregions/${b.slug}/`}>
           <g class="card bio-card" data-el={`bio:${b.slug}`} tabindex="0">
           <rect
+            class="card-bg"
             x={bioColLeft}
             y={cardTop}
             width={bioW}
             height={b.cardHeight}
             rx="14"
-            fill="var(--paper-raised)"
+            fill="#ffffff"
             stroke="var(--bwl-primary)"
             stroke-width="2"
             filter="url(#softShadow)"
@@ -335,33 +340,73 @@ function curve(x1: number, y1: number, x2: number, y2: number, strength = 0.5) {
       const untagged = inv.tags?.length === 0;
       const sisImageSrc = resolveImageSource(inv.imageFile, inv.imageUrl);
       const imgY = y - inv.cardHeight / 2;
+      const imgW = Math.min(inv.cardHeight, sisW);
       const nameY = imgY + 12 + 14 * 0.8;
       const bioY = nameY + inv.nameLines.length * 14 + 4;
       const descY = bioY + inv.bioLines.length * 11 + 4;
       return (
         <g class="card sis-card" data-el={`sis:${inv.slug}`} tabindex="0">
           <rect
+            class="card-bg"
             x={sisX}
             y={imgY}
             width={sisW}
             height={inv.cardHeight}
             rx="10"
-            fill={untagged ? "var(--paper-raised)" : "#ffffff"}
+            fill="#ffffff"
             stroke={untagged ? "var(--bwl-muted)" : "var(--line-strong)"}
             stroke-width="1.5"
             stroke-dasharray={untagged ? "4,3" : "none"}
             filter="url(#softShadow)"
           />
-          {sisImageSrc && (
-            <image
-              x={sisX}
-              y={imgY}
-              width={Math.min(inv.cardHeight, sisW)}
-              height={inv.cardHeight}
-              href={sisImageSrc}
-              clip-path={`url(#clip-sis-${inv.slug})`}
-              preserveAspectRatio="xMidYMid slice"
-            />
+          {/* image + external-link badge share one clickable region: the
+              whole image is the hit area (not just the small badge), so
+              there's a generous margin of error. The badge sits in the
+              image's own top-right corner, inset by the same padding used
+              elsewhere on the card, with an opaque background so it reads
+              clearly over any photo without covering the text below. */}
+          {inv.externalUrl ? (
+            <a href={inv.externalUrl} target="_blank" rel="noopener" aria-label={`Open ${inv.name} — external link`}>
+              {sisImageSrc && (
+                <image
+                  x={sisX}
+                  y={imgY}
+                  width={imgW}
+                  height={inv.cardHeight}
+                  href={sisImageSrc}
+                  clip-path={`url(#clip-sis-${inv.slug})`}
+                  preserveAspectRatio="xMidYMid slice"
+                />
+              )}
+              <circle
+                cx={sisImageSrc ? sisX + imgW - 16 : sisX + sisW - 16}
+                cy={imgY + 16}
+                r="10"
+                fill="var(--paper-raised)"
+                filter="url(#softShadow)"
+              />
+              <text
+                x={sisImageSrc ? sisX + imgW - 16 : sisX + sisW - 16}
+                y={imgY + 20}
+                text-anchor="middle"
+                font-size="11"
+                fill="var(--bwl-primary)"
+                font-family="var(--font-body)"
+                font-weight="bold"
+              >↗</text>
+            </a>
+          ) : (
+            sisImageSrc && (
+              <image
+                x={sisX}
+                y={imgY}
+                width={imgW}
+                height={inv.cardHeight}
+                href={sisImageSrc}
+                clip-path={`url(#clip-sis-${inv.slug})`}
+                preserveAspectRatio="xMidYMid slice"
+              />
+            )
           )}
           {sisImageSrc && (
             <rect
@@ -402,22 +447,6 @@ function curve(x1: number, y1: number, x2: number, y2: number, strength = 0.5) {
             anchor="start"
             style="font-family:var(--font-body);font-size:9.5px;fill:var(--bwl-text);opacity:0.85;"
           />
-          {inv.externalUrl && (
-            <a href={inv.externalUrl} target="_blank" rel="noopener">
-              <g>
-                <circle cx={sisX + sisW - 15} cy={y + 22} r="8" fill="var(--bwl-secondary)" opacity="0.15" />
-                <text
-                  x={sisX + sisW - 15}
-                  y={y + 25}
-                  text-anchor="middle"
-                  font-size="10"
-                  fill="var(--bwl-primary)"
-                  font-family="var(--font-body)"
-                  font-weight="bold"
-                >↗</text>
-              </g>
-            </a>
-          )}
         </g>
       );
     })}
@@ -505,7 +534,7 @@ function curve(x1: number, y1: number, x2: number, y2: number, strength = 0.5) {
     width: auto; /* fixed px width from the width attribute: browser zoom scales it */
     height: auto;
     margin: 0 auto;
-    background: var(--paper);
+    background: var(--paper-raised);
   }
 
   .flow-wrap svg .conn {
