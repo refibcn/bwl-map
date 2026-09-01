@@ -1,0 +1,381 @@
+---
+/**
+ * One card in a flow diagram (FlowDiagram / VerticalFlow / ShiftDiagram /
+ * VerticalShiftDiagram), rendered as real HTML inside an SVG <foreignObject>
+ * — NOT raw SVG <text>. This is what lets card text wrap using the browser's
+ * own layout instead of a build-time character-width estimate (the estimate
+ * was deliberately conservative so a line never overflowed its card, which
+ * is exactly why lines used to wrap early and leave a visible gap before the
+ * card's right edge — the bug this component exists to fix).
+ *
+ * The card's pixel x/y/width/height are still computed ahead of time by the
+ * parent diagram's frontmatter script (SVG has no auto-layout, so the canvas
+ * size and every card's box still has to be known before render) — this
+ * component only changes what's INSIDE that box, from SVG text/image/rect to
+ * a normal HTML div. Connector <path> lines stay pure SVG in the parent, and
+ * must keep being emitted BEFORE this component in DOM order — that's what
+ * makes a card visually occlude a line passing behind it (pure SVG paint
+ * order, no z-index involved).
+ *
+ * `title`/`subtitle`/`body` are the RAW, unwrapped text — the browser wraps
+ * them for real. `*MaxLines` caps each field via CSS line-clamp (ellipsis if
+ * exceeded) so the parent's height estimate — which still assumes a fixed
+ * number of lines per field, same as before — stays a safe upper bound.
+ */
+interface Props {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  kind: "bio" | "cs" | "sis" | "shift";
+  imagePosition: "top" | "left" | "none";
+  imageSrc?: string | null;
+  imageSize?: number; // height (top) or width (left) of the image, in px
+  imageHref?: string | null; // SI cards: only the image is a link, not the text
+  imageExternal?: boolean;
+  title: string;
+  titleMaxLines: number;
+  titleSize?: number; // px — overrides the kind's default title font-size
+  subtitle?: string | null;
+  subtitleMaxLines?: number;
+  subtitleSize?: number;
+  body?: string | null;
+  bodyMaxLines?: number;
+  bodySize?: number;
+  href?: string | null; // bio/cs cards: the whole card is a link
+  external?: boolean;
+  dataEl: string;
+  dataRoot?: boolean;
+  borderColor?: string | null;
+  dashed?: boolean; // untagged sis cards: dashed border instead of solid
+  radius?: number; // px — overrides the kind's default corner radius
+  paddingX?: number; // px — overrides the kind's default body padding
+  paddingY?: number;
+  centered?: boolean; // text-align + vertical-centers the body's content
+}
+
+const {
+  x,
+  y,
+  width,
+  height,
+  kind,
+  imagePosition,
+  imageSrc = null,
+  imageSize,
+  imageHref = null,
+  imageExternal = false,
+  title,
+  titleMaxLines,
+  titleSize,
+  subtitle = null,
+  subtitleMaxLines = 1,
+  subtitleSize,
+  body = null,
+  bodyMaxLines = 4,
+  bodySize,
+  href = null,
+  external = false,
+  dataEl,
+  dataRoot = false,
+  borderColor = null,
+  dashed = false,
+  radius,
+  paddingX,
+  paddingY,
+  centered = false,
+} = Astro.props as Props;
+
+// Dynamic root tag: the card itself IS the whole-card link when `href` is
+// given (bio/cs cards), so it's natively focusable/clickable with no extra
+// wrapper — no other element on the page needs its own wrapping <a> plus a
+// separate hover/focus target. SI cards pass no `href` (only `imageHref`),
+// so the root stays a plain, still-focusable-via-tabindex div.
+const Root = href ? "a" : "div";
+const ImgWrap = imageHref ? "a" : "div";
+
+const cardStyle = [
+  borderColor ? `--flow-card-border:${borderColor}` : "",
+  imageSize ? `--flow-card-img-size:${imageSize}px` : "",
+  titleSize ? `--flow-card-title-size:${titleSize}px` : "",
+  subtitleSize ? `--flow-card-subtitle-size:${subtitleSize}px` : "",
+  bodySize ? `--flow-card-body-size:${bodySize}px` : "",
+  radius !== undefined ? `--flow-card-radius:${radius}px` : "",
+  paddingX !== undefined ? `--flow-card-pad-x:${paddingX}px` : "",
+  paddingY !== undefined ? `--flow-card-pad-y:${paddingY}px` : "",
+  dashed ? "border-style:dashed" : "",
+]
+  .filter(Boolean)
+  .join(";");
+---
+
+<foreignObject x={x} y={y} width={width} height={height}>
+  <Root
+    xmlns="http://www.w3.org/1999/xhtml"
+    class={`card ${kind}-card flow-card flow-card--${kind} flow-card--img-${imagePosition}${centered ? " flow-card--centered" : ""}`}
+    data-el={dataEl}
+    data-root={dataRoot ? "true" : undefined}
+    tabindex="0"
+    style={cardStyle || undefined}
+    href={href ?? undefined}
+    target={href && external ? "_blank" : undefined}
+    rel={href && external ? "noopener" : undefined}
+    aria-label={href ? title : undefined}
+  >
+    {imagePosition !== "none" && imageSrc && (
+      <ImgWrap
+        class="flow-card-img"
+        href={imageHref ?? undefined}
+        target={imageHref && imageExternal ? "_blank" : undefined}
+        rel={imageHref && imageExternal ? "noopener" : undefined}
+        aria-label={imageHref ? `Open ${title} — external link` : undefined}
+      >
+        <img src={imageSrc} alt="" loading="lazy" />
+        {imageHref && imageExternal && (
+          <span class="flow-card-badge" aria-hidden="true">↗</span>
+        )}
+      </ImgWrap>
+    )}
+    <div class="flow-card-body">
+      <p class="flow-card-title" style={`-webkit-line-clamp:${titleMaxLines}`}>{title}</p>
+      {subtitle && (
+        <p class="flow-card-subtitle" style={`-webkit-line-clamp:${subtitleMaxLines}`}>{subtitle}</p>
+      )}
+      {body && <p class="flow-card-text" style={`-webkit-line-clamp:${bodyMaxLines}`}>{body}</p>}
+    </div>
+  </Root>
+</foreignObject>
+
+<style>
+  /* Box-model reset — explicit per element, NEVER via a `.flow-card *`
+     universal selector: this exact codebase has already shipped one bug
+     from a scoped universal-selector reset silently zeroing paddings in
+     the production build (an Astro scoped-style compilation quirk). */
+  .flow-card {
+    box-sizing: border-box;
+    margin: 0;
+    display: flex;
+    width: 100%;
+    height: 100%;
+    overflow: hidden; /* safety net: line-clamp should prevent this ever firing */
+    background: #ffffff;
+    border-style: solid;
+    border-color: var(--flow-card-border, var(--bwl-primary));
+    box-shadow: 0 2px 6px rgba(32, 64, 79, 0.08);
+    text-decoration: none;
+    cursor: pointer;
+    transition: opacity 0.25s ease;
+  }
+  .flow-card:focus {
+    outline: none;
+  }
+  .flow-card--img-top {
+    flex-direction: column;
+  }
+  .flow-card--img-left,
+  .flow-card--img-none {
+    flex-direction: row;
+  }
+
+  /* Per-kind chrome — centralized here (not per-diagram) on purpose: all
+     four diagrams already render pixel-identical card chrome, only layout
+     differs, so keeping it in one place is what stops it drifting apart
+     again the way it did before this fix. */
+  .flow-card--bio {
+    --flow-card-radius: 18px;
+    border-width: 2px;
+  }
+  .flow-card--cs {
+    --flow-card-radius: 12px;
+    border-width: 2px;
+  }
+  .flow-card--sis {
+    --flow-card-radius: 10px;
+    border-width: 1.5px;
+    border-color: var(--flow-card-border, var(--line-strong));
+  }
+  .flow-card--shift {
+    --flow-card-radius: 18px;
+    border-width: 2px;
+  }
+  .flow-card {
+    border-radius: var(--flow-card-radius, 12px);
+  }
+
+  .flow-card-img {
+    display: block;
+    position: relative;
+    flex-shrink: 0;
+    overflow: hidden;
+    background: rgba(32, 64, 79, 0.06);
+  }
+  .flow-card-img img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  /* Outside-only corner rounding: only the corners on the card's own outer
+     edge round (image on top -> top corners; image on left -> left
+     corners), matching the flush-cut look the SVG clipPaths gave before. */
+  .flow-card--img-top .flow-card-img {
+    width: 100%;
+    height: var(--flow-card-img-size, 160px);
+    border-top-left-radius: var(--flow-card-radius);
+    border-top-right-radius: var(--flow-card-radius);
+  }
+  .flow-card--img-left .flow-card-img {
+    width: var(--flow-card-img-size, 150px);
+    height: 100%;
+    align-self: stretch;
+    border-top-left-radius: var(--flow-card-radius);
+    border-bottom-left-radius: var(--flow-card-radius);
+  }
+
+  .flow-card-badge {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--paper-raised);
+    box-shadow: 0 2px 4px rgba(32, 64, 79, 0.28);
+    font-family: var(--font-body);
+    font-size: 11px;
+    font-weight: bold;
+    line-height: 1;
+    color: var(--bwl-primary);
+  }
+
+  .flow-card-body {
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    min-height: 0;
+    flex: 1 1 auto;
+  }
+  .flow-card--bio .flow-card-body {
+    padding: var(--flow-card-pad-y, 24px) var(--flow-card-pad-x, 20px);
+    gap: 5px;
+  }
+  .flow-card--cs .flow-card-body {
+    padding: var(--flow-card-pad-y, 12px) var(--flow-card-pad-x, 24px);
+    gap: 4px;
+  }
+  .flow-card--sis .flow-card-body {
+    padding: 12px 12px 12px 18px; /* 18px gap from the image, matches SIS_TEXT_GAP */
+    gap: 4px;
+  }
+  .flow-card--img-none.flow-card--sis .flow-card-body {
+    padding-left: 16px;
+  }
+  .flow-card--shift .flow-card-body {
+    padding: 24px;
+    gap: 12px;
+  }
+  .flow-card--centered .flow-card-body {
+    text-align: center;
+    justify-content: center;
+  }
+  .flow-card--centered .flow-card-title,
+  .flow-card--centered .flow-card-subtitle,
+  .flow-card--centered .flow-card-text {
+    align-self: center;
+  }
+
+  .flow-card-title,
+  .flow-card-subtitle,
+  .flow-card-text {
+    margin: 0;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .flow-card--bio .flow-card-title {
+    font-family: var(--font-display);
+    font-size: var(--flow-card-title-size, 18px);
+    font-weight: bold;
+    line-height: 1.2;
+    color: var(--bwl-primary);
+  }
+  .flow-card--bio .flow-card-subtitle {
+    font-family: var(--font-display);
+    font-size: var(--flow-card-subtitle-size, 10px);
+    font-weight: bold;
+    line-height: 1.2;
+    color: var(--bwl-secondary);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+  .flow-card--bio .flow-card-text {
+    font-family: var(--font-body);
+    font-size: var(--flow-card-body-size, 9px);
+    line-height: 1.3;
+    color: var(--bwl-text);
+    opacity: 0.85;
+  }
+  .flow-card--cs .flow-card-title,
+  .flow-card--sis .flow-card-title {
+    font-family: var(--font-display);
+    font-size: var(--flow-card-title-size, 12px);
+    font-weight: bold;
+    line-height: 1.2;
+    color: var(--bwl-primary);
+  }
+  .flow-card--cs .flow-card-text {
+    font-family: var(--font-body);
+    font-size: var(--flow-card-body-size, 9.5px);
+    line-height: 1.3;
+    color: var(--bwl-text);
+    opacity: 0.85;
+  }
+  .flow-card--sis .flow-card-subtitle {
+    /* the sis card's subtitle slot is used for its parent bioregion's name
+       (ShiftDiagram/VerticalShiftDiagram only) — same bold/uppercase/secondary
+       treatment as bio's country label, smaller by default. */
+    font-family: var(--font-body);
+    font-size: var(--flow-card-subtitle-size, 8.5px);
+    font-weight: bold;
+    line-height: 1.2;
+    color: var(--bwl-secondary);
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+  .flow-card--sis .flow-card-text {
+    font-family: var(--font-body);
+    font-size: var(--flow-card-body-size, 9.5px);
+    line-height: 1.3;
+    color: var(--bwl-text);
+    opacity: 0.85;
+  }
+  .flow-card--shift .flow-card-title {
+    font-family: var(--font-display);
+    font-size: var(--flow-card-title-size, 16px);
+    font-weight: bold;
+    line-height: 1.2;
+    color: var(--bwl-primary);
+  }
+  .flow-card--shift .flow-card-subtitle {
+    /* the shift card's subtitle slot is its leveragePoint — bold/secondary
+       like other subtitles, but NOT uppercase (unlike bio's country / sis's
+       bioregion label). */
+    font-family: var(--font-body);
+    font-size: var(--flow-card-subtitle-size, 10px);
+    font-weight: bold;
+    line-height: 1.3;
+    color: var(--bwl-secondary);
+    letter-spacing: 0.02em;
+  }
+  .flow-card--shift .flow-card-text {
+    font-family: var(--font-body);
+    font-size: var(--flow-card-body-size, 10px);
+    line-height: 1.3;
+    color: var(--bwl-text);
+    opacity: 0.85;
+  }
+</style>

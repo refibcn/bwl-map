@@ -1,11 +1,15 @@
 /**
- * Text measurement + wrapping helpers for the SVG diagram.
+ * Text measurement helpers for the flow diagrams (FlowDiagram, VerticalFlow,
+ * ShiftDiagram, VerticalShiftDiagram).
  *
- * SVG <text> cannot auto-wrap, so we estimate the rendered width at build
- * time using an average per-character advance (in em) per font style. The
- * ratios are deliberately conservative (slightly wide) so wrapped lines never
- * overflow their card — this is the generic "length/format controller" that
- * keeps card text fitting for any bioregion.
+ * Card content is real HTML now (see FlowCard.astro), so the browser wraps
+ * the actual displayed text — nothing here decides what's shown. What's
+ * still missing is auto-layout: every card's pixel height has to be decided
+ * ahead of time in the parent's frontmatter, before anything renders, so
+ * wrapToWidth's word-wrap simulation is kept on purely as a SIZING estimate
+ * (an approximate "how many lines will this take" for the height budget).
+ * Its ratios are deliberately conservative (slightly wide per character) so
+ * that estimate errs toward reserving enough room rather than too little.
  */
 
 export type FontStyle = "body" | "display";
@@ -65,12 +69,4 @@ export function wrapToWidth(
   }
   lines.push(current);
   return lines;
-}
-
-/** Keep at most `maxLines` lines; the last kept line gets an ellipsis. */
-export function capLines(lines: string[], maxLines: number): string[] {
-  if (lines.length <= maxLines) return lines;
-  const kept = lines.slice(0, maxLines);
-  kept[maxLines - 1] = kept[maxLines - 1].replace(/\s+$/, "") + "…";
-  return kept;
 }

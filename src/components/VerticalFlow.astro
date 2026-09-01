@@ -13,11 +13,24 @@
  * highlights all its innovations wherever they sit; hovering an innovation
  * highlights all its shifts + the bioregion.
  */
-import SVGTextBlock from "./SVGTextBlock.astro";
+import FlowCard from "./FlowCard.astro";
 import { notionImageUrl } from "../lib/images";
-import { wrapToWidth, capLines } from "../lib/text";
+import { wrapToWidth } from "../lib/text";
 import { shiftColor } from "../lib/shift-pages";
-import { roundedRectPath } from "../lib/shapes";
+
+// See FlowDiagram.astro for the full rationale: wrapToWidth's word-wrap
+// simulation is the only SAFE line-count estimate to size a box off (a
+// naive length÷width division under-predicts real line counts and causes
+// real overflow); a STANDARD floor on top keeps typical-length cards a
+// consistent height instead of one that only reflects the estimate's own
+// per-string quirks. Not every card below needs the floor — several of
+// this file's rows/grids already size every card in a row/line to
+// whichever one needs the most room, which is already consistent by
+// construction — but the safe wrapToWidth-based line count matters
+// everywhere a field previously had no cap at all ("never truncated").
+function estimateLineCount(lines: string[], standardLines: number, maxLines: number): number {
+  return Math.min(Math.max(standardLines, lines.length), maxLines);
+}
 
 interface Shift {
   slug: string;
@@ -78,28 +91,20 @@ const W = 1700;
 const margin = { top: 90, right: 60, bottom: 60, left: 60 };
 
 // --- bioregion card (top, image on the left) ---
-const bioW = 720;
+const bioW = 540; // 720 * 0.75 — narrower than the original tuning
 const bioImg = 180;
 const bioH = 180;
 const bioX = W / 2;
 const bioLeft = bioX - bioW / 2;
 const bioTop = margin.top;
 const bioBottom = bioTop + bioH;
-const bioTextX = bioLeft + bioImg + 26;
-const bioTextW = bioW - bioImg - 26 - 24;
 const bioImageSrc = resolveImageSource(bioregionImageFile, bioregionImageUrl);
-
-const bioNameLines = capLines(wrapToWidth(bioregionName || "", bioTextW, 20, "display"), 2);
-const bioCountryLines = capLines(wrapToWidth(bioregionCountry || "", bioTextW, 10, "display"), 1);
-const bioDescLines = capLines(wrapToWidth(bioregionDescription || "", bioTextW, 9.5, "body"), 6);
-const bioTextHeight =
-  bioNameLines.length * 24 +
-  (bioCountryLines.length ? 6 + bioCountryLines.length * 12 : 0) +
-  (bioDescLines.length ? 8 + bioDescLines.length * 12.5 : 0);
-const bioTextTop = bioTop + (bioH - bioTextHeight) / 2;
-const bioNameY = bioTextTop + 24 * 0.8;
-const bioCountryY = bioNameY + bioNameLines.length * 24 + 6;
-const bioDescY = bioCountryY + bioCountryLines.length * 12 + 8;
+// The bio card's height (180) is a fixed constant here, not content-driven
+// — these are just the max-lines caps for CSS line-clamp, tuned so the
+// worst case still fits comfortably within that fixed box.
+const BIO_NAME_MAX_LINES = 2;
+const BIO_COUNTRY_MAX_LINES = 1;
+const BIO_DESC_MAX_LINES = 6;
 
 // --- critical shifts: ONE horizontal row, compact cards ---
 const shiftIndexBySlug = new Map(shifts.map((s, i) => [s.slug, i]));
@@ -107,15 +112,26 @@ const shiftIndexBySlug = new Map(shifts.map((s, i) => [s.slug, i]));
 const csCount = shifts.length;
 const csGap = csCount > 9 ? 8 : 12;
 const csW = Math.min(150, Math.floor((W - margin.left - margin.right - (csCount - 1) * csGap) / csCount));
+// These two fields had no max-lines cap at all before this migration —
+// see FlowDiagram.astro for why an unbounded field can't have a
+// predictable card height. All cards in this row already share the
+// tallest one's height (no standard-floor needed — that's already
+// consistent by construction), just a safe cap.
+const CS_NAME_MAX_LINES = 3;
+const CS_LEVERAGE_MAX_LINES = 5;
 const csCards = shifts.map((s) => {
-  // Full database text — names and leverage points are wrapped to the card
-  // width but never truncated.
-  const nameLines = wrapToWidth(`${s.emoji || ""} ${s.name}`.trim(), csW - 24, 12, "display");
-  const leverageLines = wrapToWidth(s.leveragePoint || "", csW - 24, 8.5, "body");
-  return { ...s, nameLines, leverageLines, color: shiftColor(s.slug) };
+  const nameLineCount = Math.min(
+    wrapToWidth(`${s.emoji || ""} ${s.name}`.trim(), csW - 24, 12, "display").length,
+    CS_NAME_MAX_LINES
+  );
+  const leverageLineCount = Math.min(
+    wrapToWidth(s.leveragePoint || "", csW - 24, 8.5, "body").length,
+    CS_LEVERAGE_MAX_LINES
+  );
+  return { ...s, nameLineCount, leverageLineCount, color: shiftColor(s.slug) };
 });
 // Shift cards share the row height of the tallest one (full text fits).
-const csH = Math.max(96, ...csCards.map((c) => 26 + c.nameLines.length * 14 + 3 + c.leverageLines.length * 11 + 14));
+const csH = Math.max(96, ...csCards.map((c) => 26 + c.nameLineCount * 14 + 3 + c.leverageLineCount * 11 + 14));
 const csRowW = csCards.length * csW + Math.max(0, csCards.length - 1) * csGap;
 const csStartX = (W - csRowW) / 2;
 const csTop = bioBottom + 115;
@@ -139,13 +155,20 @@ const orderedInnovations = [...innovations].sort((a, b) => {
   return ia - ib;
 });
 
+// Same "was never capped" situation as the cs-card fields above — each
+// card still grows to its own real content height (unchanged design), just
+// with a safe upper bound instead of an unbounded one.
+const SIS_NAME_MAX_LINES = 3;
+const SIS_DESC_MAX_LINES = 6;
 const sisCards = orderedInnovations.map((inv) => {
   const hasImage = !!resolveImageSource(inv.imageFile, inv.imageUrl);
-  // Full database text — names and descriptions are wrapped but never cut.
-  const nameLines = wrapToWidth(inv.name || "", sisW - 24, 12, "display");
-  const descLines = wrapToWidth(inv.description || "", sisW - 24, 9, "body");
-  const contentH = sisImgH + 8 + nameLines.length * 14 + 3 + descLines.length * 12 + 16;
-  return { ...inv, hasImage, nameLines, descLines, cardH: Math.max(sisCardH, contentH) };
+  const nameLineCount = Math.min(wrapToWidth(inv.name || "", sisW - 24, 12, "display").length, SIS_NAME_MAX_LINES);
+  const descLineCount = Math.min(
+    wrapToWidth(inv.description || "", sisW - 24, 9, "body").length,
+    SIS_DESC_MAX_LINES
+  );
+  const contentH = sisImgH + 8 + nameLineCount * 14 + 3 + descLineCount * 12 + 16;
+  return { ...inv, hasImage, nameLineCount, descLineCount, cardH: Math.max(sisCardH, contentH) };
 });
 
 const perLine = Math.max(1, Math.floor((W - margin.left - margin.right + sisGap) / (sisW + sisGap)));
@@ -216,25 +239,6 @@ function ortho(x1: number, y1: number, x2: number, y2: number, busY: number) {
       {bioregionName} on top, its critical shifts in a row, then the systemic innovations in horizontal rows.
     </desc>
 
-    <defs>
-      <filter id="softShadow" x="-20%" y="-20%" width="140%" height="140%">
-        <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#20404f" flood-opacity="0.08" />
-      </filter>
-      {/* explicit clip paths keep every card image inside its own card —
-          only the corners on the card's own outer edge are rounded (image
-          on left -> left corners; image on top -> top corners) */}
-      <clipPath id="clip-bio">
-        <path d={roundedRectPath(bioLeft, bioTop, bioImg, bioH, 18, true, false, false, true)} />
-      </clipPath>
-      {sisPositions.map((pos, j) => {
-        const inv = sisCards[j];
-        return (
-          <clipPath id={`clip-${inv.slug}`}>
-            <path d={roundedRectPath(pos.x, pos.y, sisW, sisImgH, 10, true, true, false, false)} />
-          </clipPath>
-        );
-      })}
-    </defs>
 
     {/* Bus tree: bioregion → shifts */}
     <path class="conn conn-bio-bus" data-from="bio" data-to="bio" d={`M${bioX},${bioBottom} L${bioX},${busY} L${busLeft},${busY} L${busRight},${busY}`} fill="none" stroke="#20404f" stroke-width="2.5" opacity="0.35" stroke-linejoin="round" />
@@ -278,140 +282,79 @@ function ortho(x1: number, y1: number, x2: number, y2: number, busY: number) {
         link before. Send it to the real bioregion page on the BWL website
         (external), same convention used for the systemic-innovation image
         links. */}
-    <a class="card-link" href={`https://bioregionalweavinglabs.org/bioregions/${bioregionSlug}/`} target="_blank" rel="noopener">
-    <g class="card bio-card" data-el="bio" data-root="bio" tabindex="0">
-      <rect class="card-bg" x={bioLeft} y={bioTop} width={bioW} height={bioH} rx="18" fill="#ffffff" stroke="var(--bwl-primary)" stroke-width="2" filter="url(#softShadow)" />
-      {bioImageSrc && (
-        <image
-          x={bioLeft}
-          y={bioTop}
-          width={bioImg}
-          height={bioH}
-          href={bioImageSrc}
-          clip-path="url(#clip-bio)"
-          preserveAspectRatio="xMidYMid slice"
-        />
-      )}
-      <rect x={bioLeft} y={bioTop} width={bioW} height={bioH} rx="18" fill="none" stroke="var(--bwl-primary)" stroke-width="2" />
-      <SVGTextBlock
-        lines={bioNameLines}
-        x={bioTextX}
-        y={bioNameY}
-        lineHeight="1.2em"
-        anchor="start"
-        style="font-family:var(--font-display);font-size:20px;font-weight:bold;fill:var(--bwl-primary);"
-      />
-      {bioCountryLines.length > 0 && (
-        <SVGTextBlock
-          lines={bioCountryLines}
-          x={bioTextX}
-          y={bioCountryY}
-          lineHeight="1.2em"
-          anchor="start"
-          style="font-family:var(--font-display);font-size:10px;font-weight:bold;fill:var(--bwl-secondary);letter-spacing:0.1em;text-transform:uppercase;"
-        />
-      )}
-      <SVGTextBlock
-        lines={bioDescLines}
-        x={bioTextX}
-        y={bioDescY}
-        lineHeight="1.3em"
-        anchor="start"
-        style="font-family:var(--font-body);font-size:9.5px;fill:var(--bwl-text);opacity:0.85;"
-      />
-    </g>
-    </a>
+    <FlowCard
+      x={bioLeft}
+      y={bioTop}
+      width={bioW}
+      height={bioH}
+      kind="bio"
+      imagePosition="left"
+      imageSrc={bioImageSrc}
+      imageSize={bioImg}
+      title={bioregionName}
+      titleMaxLines={BIO_NAME_MAX_LINES}
+      titleSize={20}
+      subtitle={bioregionCountry || null}
+      subtitleMaxLines={BIO_COUNTRY_MAX_LINES}
+      body={bioregionDescription}
+      bodyMaxLines={BIO_DESC_MAX_LINES}
+      bodySize={9.5}
+      href={`https://bioregionalweavinglabs.org/bioregions/${bioregionSlug}/`}
+      external
+      dataEl="bio"
+      dataRoot
+    />
 
     {/* Critical shift cards (one row) — clickable, like the horizontal view */}
-    {csCards.map((s, i) => {
-      const x = csStartX + i * (csW + csGap);
-      const nameY = csTop + 12 + 14 * 0.8;
-      const leverageY = nameY + s.nameLines.length * 14 + 3;
-      return (
-        <a class="card-link" href={`${base}critical-shifts/${s.slug}/`}>
-          <g class={`card cs-card cs-${s.slug}`} data-el={`cs:${s.slug}`} tabindex="0">
-            <rect class="card-bg" x={x} y={csTop} width={csW} height={csH} rx="10" fill="#ffffff" stroke={s.color} stroke-width="2" filter="url(#softShadow)" />
-            <SVGTextBlock
-              lines={s.nameLines}
-              x={x + 12}
-              y={nameY}
-              lineHeight="1.2em"
-            style="font-family:var(--font-display);font-size:12px;font-weight:bold;fill:var(--bwl-primary);"
-          />
-            <SVGTextBlock
-              lines={s.leverageLines}
-              x={x + 12}
-              y={leverageY}
-              lineHeight="1.3em"
-              style="font-family:var(--font-body);font-size:8.5px;fill:var(--bwl-text);opacity:0.85;"
-            />
-          </g>
-        </a>
-      );
-    })}
+    {csCards.map((s, i) => (
+      <FlowCard
+        x={csStartX + i * (csW + csGap)}
+        y={csTop}
+        width={csW}
+        height={csH}
+        kind="cs"
+        imagePosition="none"
+        title={`${s.emoji || ""} ${s.name}`.trim()}
+        titleMaxLines={CS_NAME_MAX_LINES}
+        body={s.leveragePoint || null}
+        bodyMaxLines={CS_LEVERAGE_MAX_LINES}
+        bodySize={8.5}
+        href={`${base}critical-shifts/${s.slug}/`}
+        dataEl={`cs:${s.slug}`}
+        borderColor={s.color}
+        radius={10}
+        paddingX={12}
+        paddingY={12}
+      />
+    ))}
 
-    {/* Systemic innovation cards (image on top) */}
+    {/* Systemic innovation cards (image on top) — image + external-link
+        badge share one clickable region (the whole image, not just the
+        small badge); the text is deliberately not part of that link. */}
     {sisCards.map((inv, j) => {
       const { x, y } = sisPositions[j];
       const sisImageSrc = resolveImageSource(inv.imageFile, inv.imageUrl);
-      const nameY = y + sisImgH + 8 + 14 * 0.8;
-      const descY = nameY + inv.nameLines.length * 14 + 3;
       return (
-        <g class="card sis-card" data-el={`sis:${inv.slug}`} tabindex="0">
-          <rect class="card-bg" x={x} y={y} width={sisW} height={inv.cardH} rx="10" fill="#ffffff" stroke="var(--line-strong)" stroke-width="1.5" filter="url(#softShadow)" />
-          {/* image + external-link badge share one clickable region: the
-              whole image is the hit area (not just the small badge), so
-              there's a generous margin of error. The badge sits in the
-              image's own top-right corner, inset by the same padding used
-              elsewhere on the card, with an opaque background so it reads
-              clearly over any photo without covering the text below. */}
-          {inv.externalUrl ? (
-            <a href={inv.externalUrl} target="_blank" rel="noopener" aria-label={`Open ${inv.name} — external link`}>
-              {sisImageSrc && (
-                <image
-                  x={x}
-                  y={y}
-                  width={sisW}
-                  height={sisImgH}
-                  href={sisImageSrc}
-                  clip-path={`url(#clip-${inv.slug})`}
-                  preserveAspectRatio="xMidYMid slice"
-                />
-              )}
-              <circle cx={x + sisW - 16} cy={y + 16} r="10" fill="var(--paper-raised)" filter="url(#softShadow)" />
-              <text x={x + sisW - 16} y={y + 20} text-anchor="middle" font-size="11" fill="var(--bwl-primary)" font-family="var(--font-body)" font-weight="bold">↗</text>
-            </a>
-          ) : (
-            sisImageSrc && (
-              <image
-                x={x}
-                y={y}
-                width={sisW}
-                height={sisImgH}
-                href={sisImageSrc}
-                clip-path={`url(#clip-${inv.slug})`}
-                preserveAspectRatio="xMidYMid slice"
-              />
-            )
-          )}
-          <rect x={x} y={y} width={sisW} height={inv.cardH} rx="10" fill="none" stroke="var(--line-strong)" stroke-width="1.5" />
-          <SVGTextBlock
-            lines={inv.nameLines}
-            x={x + 12}
-            y={nameY}
-            lineHeight="1.15em"
-            anchor="start"
-            style="font-family:var(--font-display);font-size:12px;font-weight:bold;fill:var(--bwl-primary);"
-          />
-          <SVGTextBlock
-            lines={inv.descLines}
-            x={x + 12}
-            y={descY}
-            lineHeight="1.3em"
-            anchor="start"
-            style="font-family:var(--font-body);font-size:9px;fill:var(--bwl-text);opacity:0.85;"
-          />
-        </g>
+        <FlowCard
+          x={x}
+          y={y}
+          width={sisW}
+          height={inv.cardH}
+          kind="sis"
+          imagePosition={sisImageSrc ? "top" : "none"}
+          imageSrc={sisImageSrc}
+          imageSize={sisImgH}
+          imageHref={inv.externalUrl}
+          imageExternal
+          title={inv.name}
+          titleMaxLines={SIS_NAME_MAX_LINES}
+          body={inv.description || null}
+          bodyMaxLines={SIS_DESC_MAX_LINES}
+          bodySize={9}
+          dataEl={`sis:${inv.slug}`}
+          paddingX={12}
+          paddingY={8}
+        />
       );
     })}
   </svg>
@@ -434,10 +377,14 @@ function ortho(x1: number, y1: number, x2: number, y2: number, busY: number) {
         }
       });
       if (elId.startsWith("sis:")) {
-        const root = svg!.querySelector<SVGElement>("[data-root]");
+        const root = svg!.querySelector<HTMLElement>("[data-root]");
         if (root?.dataset.el) match.add(root.dataset.el);
       }
-      svg!.querySelectorAll<SVGElement>(".card, .conn").forEach((el) => {
+      // Cards are now real HTML elements (rendered via <foreignObject>, not
+      // raw SVG <g>) — this selector still matches both them and the SVG
+      // .conn <path> lines, so the type here covers both (plain `Element`
+      // doesn't have `.dataset`, only the HTML/SVG-specific interfaces do).
+      svg!.querySelectorAll<HTMLElement | SVGElement>(".card, .conn").forEach((el) => {
         if (el.classList.contains("conn")) {
           const from = el.dataset.from;
           const to = el.dataset.to;
@@ -450,10 +397,12 @@ function ortho(x1: number, y1: number, x2: number, y2: number, busY: number) {
 
     function deactivate() {
       svg!.classList.remove("has-active");
-      svg!.querySelectorAll<SVGElement>(".active").forEach((el) => el.classList.remove("active"));
+      svg!.querySelectorAll<HTMLElement | SVGElement>(".active").forEach((el) => el.classList.remove("active"));
     }
 
-    svg.querySelectorAll<SVGGElement>(".bio-card, .cs-card, .sis-card").forEach((g) => {
+    // Cards are real HTML (an <a> when the whole card links, a <div>
+    // otherwise) rendered inside <foreignObject> — HTMLElement covers both.
+    svg.querySelectorAll<HTMLElement>(".bio-card, .cs-card, .sis-card").forEach((g) => {
       g.addEventListener("mouseenter", () => activateEl(g.dataset.el!));
       g.addEventListener("mouseleave", deactivate);
       g.addEventListener("focus", () => activateEl(g.dataset.el!));
@@ -467,7 +416,13 @@ function ortho(x1: number, y1: number, x2: number, y2: number, busY: number) {
   })();
 </script>
 
-<style>
+<style is:global>
+  /* is:global (not scoped): the .card elements this CSS targets are now
+     rendered by the separate FlowCard.astro component (inside a
+     <foreignObject>), so they carry FlowCard's own scoping attribute, not
+     this file's — a normal scoped selector here would silently never match
+     them (same class of bug already hit once this session with MapLibre's
+     JS-created markers needing is:global for the same reason). */
   .flow-wrap {
     width: 100%;
     overflow-x: auto;
